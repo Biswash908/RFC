@@ -1,0 +1,465 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { FontAwesome } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUnit } from '../UnitContext';
+
+type RootStackParamList = {
+  FoodInputScreen: undefined;
+  FoodInfoScreen: { ingredient: Ingredient; editMode: boolean };
+  SearchScreen: undefined;
+  CalculatorScreen: { meat: number; bone: number; organ: number; plantmatter: number };
+};
+
+type CalculatorScreenRouteProp = RouteProp<RootStackParamList, 'CalculatorScreen'>;
+
+const CalculatorScreen: React.FC = () => {
+  const route = useRoute<CalculatorScreenRouteProp>();
+  const navigation = useNavigation();
+
+  const [newPlantMatter, setNewPlantMatter] = useState<number>(0);
+  const [plantMatterCorrect, setPlantMatterCorrect] = useState<{ meat: number; bone: number; organ: number }>({ meat: 0, bone: 0, organ: 0 });
+  const [includePlantMatter, setIncludePlantMatter] = useState<boolean>(false);
+
+  const initialMeatWeight = route.params?.meat ?? 0;
+  const initialBoneWeight = route.params?.bone ?? 0;
+  const initialOrganWeight = route.params?.organ ?? 0;
+
+  const { unit } = useUnit();
+
+  const [newMeat, setNewMeat] = useState<number>(80);
+  const [newBone, setNewBone] = useState<number>(10);
+  const [newOrgan, setNewOrgan] = useState<number>(10);
+
+  const [selectedRatio, setSelectedRatio] = useState<string>('80:10:10');
+
+  const [meatCorrect, setMeatCorrect] = useState<{ bone: number; organ: number }>({ bone: 0, organ: 0 });
+  const [boneCorrect, setBoneCorrect] = useState<{ meat: number; organ: number }>({ meat: 0, organ: 0 });
+  const [organCorrect, setOrganCorrect] = useState<{ meat: number; bone: number }>({ meat: 0, bone: 0 });
+
+  useEffect(() => {
+    navigation.setOptions({ title: 'Calculator' });
+  }, [navigation]);
+
+  useEffect(() => {
+    const loadRatios = async () => {
+        try {
+            const savedMeat = await AsyncStorage.getItem('meatRatio');
+            const savedBone = await AsyncStorage.getItem('boneRatio');
+            const savedOrgan = await AsyncStorage.getItem('organRatio');
+            const savedRatio = await AsyncStorage.getItem('selectedRatio');
+
+            setNewMeat(savedMeat ? Number(savedMeat) : 80);
+            setNewBone(savedBone ? Number(savedBone) : 10);
+            setNewOrgan(savedOrgan ? Number(savedOrgan) : 10);
+
+            if (savedRatio) {
+              setSelectedRatio(savedRatio);
+              setIncludePlantMatter(savedRatio.split(':').length === 4); // True if the ratio has 4 parts (including plant matter)
+          } else {
+              setSelectedRatio('80:10:10');
+              setIncludePlantMatter(false);
+          }
+        } catch (error) {
+            console.log('Failed to load ratios:', error);
+            setNewMeat(80);
+            setNewBone(10);
+            setNewOrgan(10);
+            setIncludePlantMatter(false);
+        }
+    };
+    loadRatios();
+}, []);
+
+useEffect(() => {
+  const saveRatios = async () => {
+    try {
+      await AsyncStorage.setItem('meatRatio', newMeat.toString());
+      await AsyncStorage.setItem('boneRatio', newBone.toString());
+      await AsyncStorage.setItem('organRatio', newOrgan.toString());
+      await AsyncStorage.setItem('selectedRatio', selectedRatio);
+    } catch (error) {
+      console.log('Failed to save ratios:', error);
+    }
+  };
+
+  if (newMeat !== null && newBone !== null && newOrgan !== null) {
+    saveRatios();
+    calculateCorrectors(initialMeatWeight, initialBoneWeight, initialOrganWeight, includePlantMatter ? route.params?.plantmatter : 0);
+  }
+}, [newMeat, newBone, newOrgan, selectedRatio, includePlantMatter]);
+
+const calculateCorrectors = (
+  meatWeight: number,
+  boneWeight: number,
+  organWeight: number,
+  plantMatterWeight: number = 0
+) => {
+  if (selectedRatio.split(':').length === 3) {
+    // Formulas for 3-part ratios (Meat, Bone, Organ)
+    
+    // Meat Corrector
+    if (meatWeight > 0) {
+      const bone = ((meatWeight / newMeat) * newBone) - boneWeight;
+      const organ = ((meatWeight / newMeat) * newOrgan) - organWeight;
+      setMeatCorrect({
+        bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+        organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+      });
+    } else {
+      setMeatCorrect({ bone: 0, organ: 0 });
+    }
+
+    // Bone Corrector
+    if (boneWeight > 0) {
+      const meat = ((boneWeight / newBone) * newMeat) - meatWeight;
+      const organ = ((boneWeight / newBone) * newOrgan) - organWeight;
+      setBoneCorrect({
+        meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+        organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+      });
+    } else {
+      setBoneCorrect({ meat: 0, organ: 0 });
+    }
+
+    // Organ Corrector
+    if (organWeight > 0) {
+      const meat = ((organWeight / newOrgan) * newMeat) - meatWeight;
+      const bone = ((organWeight / newOrgan) * newBone) - boneWeight;
+      setOrganCorrect({
+        meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+        bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+      });
+    } else {
+      setOrganCorrect({ meat: 0, bone: 0 });
+    }
+
+    // No Plant Matter corrector needed for 3-part ratios
+    setPlantMatterCorrect({ meat: 0, bone: 0, organ: 0 });
+
+  } else if (selectedRatio.split(':').length === 4) {
+    // Formulas for 4-part ratios (Meat, Bone, Organ, Plant Matter)
+    
+    // Meat Corrector
+    if (meatWeight > 0) {
+      const bone = ((meatWeight / newMeat) * newBone) - boneWeight;
+      const organ = ((meatWeight / newMeat) * newOrgan) - organWeight;
+      const plant = newPlantMatter > 0 ? ((meatWeight / newMeat) * newPlantMatter) - plantMatterWeight : 0;  // Guard against division by 0
+      setMeatCorrect({
+        bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+        organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+      });
+      setPlantMatterCorrect(prevState => ({
+        ...prevState,
+        meat: isNaN(plant) ? 0 : parseFloat(plant.toFixed(2)),
+      }));
+    } else {
+      setMeatCorrect({ bone: 0, organ: 0 });
+      setPlantMatterCorrect(prevState => ({ ...prevState, meat: 0 }));
+    }
+
+    // Bone Corrector
+    if (boneWeight > 0) {
+      const meat = ((boneWeight / newBone) * newMeat) - meatWeight;
+      const organ = ((boneWeight / newBone) * newOrgan) - organWeight;
+      const plant = newPlantMatter > 0 ? ((boneWeight / newBone) * newPlantMatter) - plantMatterWeight : 0;  // Guard against division by 0
+      setBoneCorrect({
+        meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+        organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+      });
+      setPlantMatterCorrect(prevState => ({
+        ...prevState,
+        bone: isNaN(plant) ? 0 : parseFloat(plant.toFixed(2)),
+      }));
+    } else {
+      setBoneCorrect({ meat: 0, organ: 0 });
+      setPlantMatterCorrect(prevState => ({ ...prevState, bone: 0 }));
+    }
+
+    // Organ Corrector
+    if (organWeight > 0) {
+      const meat = ((organWeight / newOrgan) * newMeat) - meatWeight;
+      const bone = ((organWeight / newOrgan) * newBone) - boneWeight;
+      const plant = newPlantMatter > 0 ? ((organWeight / newOrgan) * newPlantMatter) - plantMatterWeight : 0;  // Guard against division by 0
+      setOrganCorrect({
+        meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+        bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+      });
+      setPlantMatterCorrect(prevState => ({
+        ...prevState,
+        organ: isNaN(plant) ? 0 : parseFloat(plant.toFixed(2)),
+      }));
+    } else {
+      setOrganCorrect({ meat: 0, bone: 0 });
+      setPlantMatterCorrect(prevState => ({ ...prevState, organ: 0 }));
+    }
+
+    // Plant Matter Corrector
+    if (plantMatterWeight > 0) {
+      const meat = newPlantMatter > 0 ? ((plantMatterWeight / newPlantMatter) * newMeat) - meatWeight : 0;  // Guard against division by 0
+      const bone = newPlantMatter > 0 ? ((plantMatterWeight / newPlantMatter) * newBone) - boneWeight : 0;
+      const organ = newPlantMatter > 0 ? ((plantMatterWeight / newPlantMatter) * newOrgan) - organWeight : 0;
+      setPlantMatterCorrect({
+        meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+        bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+        organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+      });
+    } else {
+      setPlantMatterCorrect({ meat: 0, bone: 0, organ: 0 });
+    }
+  }
+};
+
+
+  const setRatio = (meat: number, bone: number, organ: number, plantMatter: number, ratio: string) => {
+    setNewMeat(meat);
+    setNewBone(bone);
+    setNewOrgan(organ);
+    setNewPlantMatter(plantMatter);
+    setSelectedRatio(ratio);
+    
+    setIncludePlantMatter(ratio.split(':').length === 4);
+  };
+  const showRatioInfoAlert = () => {
+    Alert.alert(
+      'Ratio Info',
+      '• Adult cats: 80% meat, 10% bone, 10% secreting organs\n\n' +
+        '• Kittens and pregnant/nursing cats: 75% meat, 15% bone, 10% secreting organs\n\n' +
+        'The higher bone content for kittens and mothers provides essential calcium for growth and lactation.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const showInfoAlert = () => {
+    Alert.alert(
+      'Corrector Info',
+      'The corrector values help you achieve the intended ratio. Adjust these values to match your desired meat, bone, and organ distribution.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const formatWeight = (value: number, ingredient: string) => {
+    const formattedValue = isNaN(value) ? '0.00' : Math.abs(value).toFixed(2);
+    const action = value >= 0 ? 'Add' : 'Remove';
+    return `${action} ${formattedValue} ${unit} of ${ingredient}`;
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+          <View style={styles.topBar} />
+
+          {/* First section */}
+          <View style={styles.ratioTitleContainer}>
+            <Text style={styles.ratioTitle}>Select your Meat:Bone:Organ ratio</Text>
+            <TouchableOpacity onPress={showRatioInfoAlert} style={styles.infoIcon}>
+              <FontAwesome name="info-circle" size={20} color="#000080" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.ratioButtonsContainer}>
+            <TouchableOpacity
+              style={[styles.ratioButton, selectedRatio === '80:10:10' && styles.selectedRatioButton]}
+              onPress={() => setRatio(80, 10, 10, 0, '80:10:10')}
+            >
+              <Text style={[styles.ratioButtonText, selectedRatio === '80:10:10' && { color: 'white' }]}>
+                80:10:10
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.ratioButton, selectedRatio === '75:15:10' && styles.selectedRatioButton]}
+              onPress={() => setRatio(75, 15, 10, 0, '75:15:10')}
+            >
+              <Text style={[styles.ratioButtonText, selectedRatio === '75:15:10' && { color: 'white' }]}>
+                75:15:10
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Second section */}
+          <View style={styles.ratioTitleContainer}>
+            <Text style={styles.ratioTitle}>
+            To add fruit/veg, set your Meat-Bone-Organ-Plant ratio:
+            </Text>
+            <TouchableOpacity onPress={showRatioInfoAlert} style={styles.infoIcon}>
+              <FontAwesome name="info-circle" size={20} color="#000080" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.ratioButtonsContainer}>
+            <TouchableOpacity
+              style={[styles.ratioButton, selectedRatio === '70:10:10:10' && styles.selectedRatioButton]}
+              onPress={() => setRatio(70, 10, 10, 10, '70:10:10:10')}
+            >
+              <Text style={[styles.ratioButtonText, selectedRatio === '70:10:10:10' && { color: 'white' }]}>
+                70:10:10:10
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.ratioButton, selectedRatio === '65:15:10:10' && styles.selectedRatioButton]}
+              onPress={() => setRatio(65, 15, 10, 10, '65:15:10:10')}
+            >
+              <Text style={[styles.ratioButtonText, selectedRatio === '65:15:10:10' && { color: 'white' }]}>
+                65:15:10:10
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.correctorInfoContainer}>
+            <Text style={styles.correctorInfoText}>Use the corrector to achieve the intended ratio:</Text>
+            <TouchableOpacity onPress={showInfoAlert} style={styles.infoIcon}>
+              <FontAwesome name="info-circle" size={20} color="#000080" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.correctorContainer}>
+            {/* Meat Corrector */}
+            <View style={[styles.correctorBox, styles.meatCorrector]}>
+              <Text style={styles.correctorTitle}>If Meat is correct</Text>
+              <Text style={styles.correctorText}>{formatWeight(meatCorrect.bone, 'bones')}</Text>
+              <Text style={styles.correctorText}>{formatWeight(meatCorrect.organ, 'organs')}</Text>
+              {includePlantMatter && (
+                <Text style={styles.correctorText}>{formatWeight(0, 'plant matter')}</Text>
+              )}
+            </View>
+
+            {/* Bone Corrector */}
+            <View style={[styles.correctorBox, styles.boneCorrector]}>
+              <Text style={styles.correctorTitle}>If Bone is correct</Text>
+              <Text style={styles.correctorText}>{formatWeight(boneCorrect.meat, 'meat')}</Text>
+              <Text style={styles.correctorText}>{formatWeight(boneCorrect.organ, 'organs')}</Text>
+              {includePlantMatter && (
+                <Text style={styles.correctorText}>{formatWeight(0, 'plant matter')}</Text>
+              )}
+            </View>
+
+            {/* Organ Corrector */}
+            <View style={[styles.correctorBox, styles.organCorrector]}>
+              <Text style={styles.correctorTitle}>If Organ is correct</Text>
+              <Text style={styles.correctorText}>{formatWeight(organCorrect.meat, 'meat')}</Text>
+              <Text style={styles.correctorText}>{formatWeight(organCorrect.bone, 'bones')}</Text>
+              {includePlantMatter && (
+                <Text style={styles.correctorText}>{formatWeight(0, 'plant matter')}</Text>
+              )}
+            </View>
+
+            {/* Plant Matter Corrector */}
+            {includePlantMatter && (
+            <View style={[styles.correctorBox, styles.plantMatterCorrector]}>
+              <Text style={styles.correctorTitle}>If Plant Matter is correct</Text>
+              <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.meat, 'meat')}</Text>
+              <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.bone, 'bones')}</Text>
+              <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.organ, 'organs')}</Text>
+            </View>
+)}
+          </View>
+        </KeyboardAvoidingView>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFF',
+  },
+  scrollContainer: {
+    paddingBottom: 20,
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  topBar: {
+    marginBottom: 16,
+  },
+  ratioTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'left',
+    flex: 1,
+  },
+  ratioTitleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoIcon: {
+    marginRight: 1,
+  },
+  ratioButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  ratioButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: 'white',
+    borderColor: 'blue',
+  },
+  selectedRatioButton: {
+    backgroundColor: '#000080',
+    borderColor: 'green',
+  },
+  customButton: {
+    alignSelf: 'center',
+    marginTop: 5,
+    marginBottom: 20,
+    borderWidth: 1,
+    marginRight: 25,
+    backgroundColor: 'white',
+    borderColor: 'blue',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  ratioButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'black',
+  },
+  correctorInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  correctorInfoText: {
+    fontSize: 18,
+    color: 'black',
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  correctorContainer: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    marginTop: 16,
+  },
+  correctorBox: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#4747f5',
+  },
+  correctorTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  correctorText: {
+    fontSize: 14,
+  },
+  plantMatterCorrector: {
+    borderColor: '#ff6347',
+  },
+});
+
+export default CalculatorScreen;
