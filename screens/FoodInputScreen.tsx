@@ -76,22 +76,35 @@ const FoodInputScreen: React.FC = () => {
   };
 
   const calculateTotals = (updatedIngredients: Ingredient[]) => {
-    const totalWt = updatedIngredients.reduce((sum, ing) =>
-      sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit), 0
+    const totalWt = updatedIngredients.reduce(
+      (sum, ing) => sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit),
+      0
     );
-    const meatWeight = updatedIngredients.reduce((sum, ing) =>
-      sum + convertToUnit(ing.meatWeight, ing.unit, globalUnit), 0
+  
+    const meatWeight = updatedIngredients.reduce(
+      (sum, ing) => sum + convertToUnit(ing.meatWeight, ing.unit, globalUnit),
+      0
     );
-    const boneWeight = updatedIngredients.reduce((sum, ing) =>
-      sum + convertToUnit(ing.boneWeight, ing.unit, globalUnit), 0
+  
+    const boneWeight = updatedIngredients.reduce(
+      (sum, ing) => sum + convertToUnit(ing.boneWeight, ing.unit, globalUnit),
+      0
     );
-    const organWeight = updatedIngredients.reduce((sum, ing) =>
-      sum + convertToUnit(ing.organWeight, ing.unit, globalUnit), 0
+  
+    const organWeight = updatedIngredients.reduce(
+      (sum, ing) => sum + convertToUnit(ing.organWeight, ing.unit, globalUnit),
+      0
     );
-    const plantMatterWeight = updatedIngredients.reduce((sum, ing) =>
-      ing.meatWeight === 0 && ing.boneWeight === 0 && ing.organWeight === 0
-        ? sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit)
-        : sum, 0
+  
+    // Correctly sum all plant matter (fruits, vegetables, nuts)
+    const plantMatterWeight = updatedIngredients.reduce(
+      (sum, ing) =>
+        ing.type === 'Fruit' ||
+        ing.type === 'Vegetable' ||
+        ing.type === 'Nut'
+          ? sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit)
+          : sum,
+      0
     );
   
     setTotalWeight(totalWt);
@@ -100,6 +113,7 @@ const FoodInputScreen: React.FC = () => {
     setTotalOrgan(organWeight);
     setTotalPlantMatter(plantMatterWeight);
   };
+  
   
   
 

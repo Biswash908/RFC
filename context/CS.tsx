@@ -82,93 +82,128 @@ const CalculatorScreen: React.FC = () => {
         await AsyncStorage.setItem('meatRatio', newMeat.toString());
         await AsyncStorage.setItem('boneRatio', newBone.toString());
         await AsyncStorage.setItem('organRatio', newOrgan.toString());
-        await AsyncStorage.setItem('plantMatterRatio', newPlantMatter.toString());
+        await AsyncStorage.setItem('plantMatterRatio', newPlantMatter.toString()); // Save plant matter ratio
         await AsyncStorage.setItem('selectedRatio', selectedRatio);
       } catch (error) {
         console.log('Failed to save ratios:', error);
       }
     };
-  
+
     if (newMeat !== null && newBone !== null && newOrgan !== null && newPlantMatter !== null) {
       saveRatios();
-      calculateCorrectors(
-        initialMeatWeight,
-        initialBoneWeight,
-        initialOrganWeight,
-        includePlantMatter ? initialPlantMatterWeight : 0,
-        newMeat,
-        newBone,
-        newOrgan,
-        newPlantMatter,
-        includePlantMatter
-      );
+      calculateCorrectors(initialMeatWeight, initialBoneWeight, initialOrganWeight, includePlantMatter ? initialPlantMatterWeight : 0);
     }
   }, [newMeat, newBone, newOrgan, newPlantMatter, selectedRatio, includePlantMatter]);
 
-  function calculateCorrectors(
-    meatWeight,
-    boneWeight,
-    organWeight,
-    plantMatterWeight,
-    newMeat,
-    newBone,
-    newOrgan,
-    newPlantMatter,
-    includePlantMatter
-  ) {
-    let meatCorrect = { bone: 0, organ: 0, plantMatter: 0 };
-    let boneCorrect = { meat: 0, organ: 0, plantMatter: 0 };
-    let organCorrect = { meat: 0, bone: 0, plantMatter: 0 };
-    let plantMatterCorrect = { meat: 0, bone: 0, organ: 0 };
+  const calculateCorrectors = (
+    meatWeight: number,
+    boneWeight: number,
+    organWeight: number,
+    plantMatterWeight: number = 0
+  ) => {
+    // Reset all correctors to 0 initially
+    setMeatCorrect({ bone: 0, organ: 0 });
+    setBoneCorrect({ meat: 0, organ: 0 });
+    setOrganCorrect({ meat: 0, bone: 0 });
+    setPlantMatterCorrect({ meat: 0, bone: 0, organ: 0 });
   
-    if (includePlantMatter) {
+    let plantMatterUpdates = { meat: 0, bone: 0, organ: 0 };
+  
+    if (selectedRatio.split(':').length === 3) {
+      // 3-part ratios (Meat, Bone, Organ)
+  
+      // Meat Corrector
       if (meatWeight > 0) {
-        meatCorrect.bone = ((meatWeight / newMeat) * newBone) - boneWeight;
-        meatCorrect.organ = ((meatWeight / newMeat) * newOrgan) - organWeight;
-        meatCorrect.plantMatter = ((meatWeight / newMeat) * newPlantMatter) - plantMatterWeight;
+        const bone = ((meatWeight / newMeat) * newBone) - boneWeight;
+        const organ = ((meatWeight / newMeat) * newOrgan) - organWeight;
+        setMeatCorrect({
+          bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+          organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+        });
       }
   
+      // Bone Corrector
       if (boneWeight > 0) {
-        boneCorrect.meat = ((boneWeight / newBone) * newMeat) - meatWeight;
-        boneCorrect.organ = ((boneWeight / newBone) * newOrgan) - organWeight;
-        boneCorrect.plantMatter = ((boneWeight / newBone) * newPlantMatter) - plantMatterWeight;
+        const meat = ((boneWeight / newBone) * newMeat) - meatWeight;
+        const organ = ((boneWeight / newBone) * newOrgan) - organWeight;
+        setBoneCorrect({
+          meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+          organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+        });
       }
   
+      // Organ Corrector
       if (organWeight > 0) {
-        organCorrect.meat = ((organWeight / newOrgan) * newMeat) - meatWeight;
-        organCorrect.bone = ((organWeight / newOrgan) * newBone) - boneWeight;
-        organCorrect.plantMatter = ((organWeight / newOrgan) * newPlantMatter) - plantMatterWeight;
+        const meat = ((organWeight / newOrgan) * newMeat) - meatWeight;
+        const bone = ((organWeight / newOrgan) * newBone) - boneWeight;
+        setOrganCorrect({
+          meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+          bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+        });
       }
   
+      // No Plant Matter corrector needed for 3-part ratios
+      setPlantMatterCorrect({ meat: 0, bone: 0, organ: 0 });
+  
+    } else if (selectedRatio.split(':').length === 4) {
+      // 4-part ratios (Meat, Bone, Organ, Plant Matter)
+  
+      // Meat Corrector
+      if (meatWeight > 0) {
+        const bone = ((meatWeight / newMeat) * newBone) - boneWeight;
+        const organ = ((meatWeight / newMeat) * newOrgan) - organWeight;
+        const plant = ((meatWeight / newMeat) * newPlantMatter) - plantMatterWeight;
+        setMeatCorrect({
+          bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+          organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+        });
+        plantMatterUpdates.meat = isNaN(plant) ? 0 : parseFloat(plant.toFixed(2));
+      }
+  
+      // Bone Corrector
+      if (boneWeight > 0) {
+        const meat = ((boneWeight / newBone) * newMeat) - meatWeight;
+        const organ = ((boneWeight / newBone) * newOrgan) - organWeight;
+        const plant = ((boneWeight / newBone) * newPlantMatter) - plantMatterWeight;
+        setBoneCorrect({
+          meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+          organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+        });
+        plantMatterUpdates.bone = isNaN(plant) ? 0 : parseFloat(plant.toFixed(2));
+      }
+  
+      // Organ Corrector
+      if (organWeight > 0) {
+        const meat = ((organWeight / newOrgan) * newMeat) - meatWeight;
+        const bone = ((organWeight / newOrgan) * newBone) - boneWeight;
+        const plant = ((organWeight / newOrgan) * newPlantMatter) - plantMatterWeight;
+        setOrganCorrect({
+          meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+          bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+        });
+        plantMatterUpdates.organ = isNaN(plant) ? 0 : parseFloat(plant.toFixed(2));
+      }
+  
+      // Plant Matter Corrector
       if (plantMatterWeight > 0) {
-        plantMatterCorrect.meat = ((plantMatterWeight / newPlantMatter) * newMeat) - meatWeight;
-        plantMatterCorrect.bone = ((plantMatterWeight / newPlantMatter) * newBone) - boneWeight;
-        plantMatterCorrect.organ = ((plantMatterWeight / newPlantMatter) * newOrgan) - organWeight;
-      }
-    } else {
-      if (meatWeight > 0) {
-        meatCorrect.bone = ((meatWeight / newMeat) * newBone) - boneWeight;
-        meatCorrect.organ = ((meatWeight / newMeat) * newOrgan) - organWeight;
-      }
-  
-      if (boneWeight > 0) {
-        boneCorrect.meat = ((boneWeight / newBone) * newMeat) - meatWeight;
-        boneCorrect.organ = ((boneWeight / newBone) * newOrgan) - organWeight;
+        const meat = ((plantMatterWeight / newPlantMatter) * newMeat) - meatWeight;
+        const bone = ((plantMatterWeight / newPlantMatter) * newBone) - boneWeight;
+        const organ = ((plantMatterWeight / newPlantMatter) * newOrgan) - organWeight;
+        plantMatterUpdates = {
+          meat: isNaN(meat) ? 0 : parseFloat(meat.toFixed(2)),
+          bone: isNaN(bone) ? 0 : parseFloat(bone.toFixed(2)),
+          organ: isNaN(organ) ? 0 : parseFloat(organ.toFixed(2)),
+        };
       }
   
-      if (organWeight > 0) {
-        organCorrect.meat = ((organWeight / newOrgan) * newMeat) - meatWeight;
-        organCorrect.bone = ((organWeight / newOrgan) * newBone) - boneWeight;
-      }
+      setPlantMatterCorrect((prevState) => ({
+        ...prevState,
+        ...plantMatterUpdates,
+      }));
     }
+  };
   
-    setMeatCorrect(meatCorrect);
-    setBoneCorrect(boneCorrect);
-    setOrganCorrect(organCorrect);
-    if (includePlantMatter) {
-      setPlantMatterCorrect(plantMatterCorrect);
-    }
-  }
+  
 
   const setRatio = (meat: number, bone: number, organ: number, plantMatter: number, ratio: string) => {
     setNewMeat(meat);
@@ -274,6 +309,7 @@ const CalculatorScreen: React.FC = () => {
 
           <View style={styles.correctorContainer}>
             {/* Meat Corrector */}
+{/* Meat Corrector */}
 <View style={[styles.correctorBox, styles.meatCorrector]}>
   <Text style={styles.correctorTitle}>If Meat is correct</Text>
   <Text style={styles.correctorText}>{formatWeight(meatCorrect.bone, 'bones')}</Text>
@@ -302,7 +338,6 @@ const CalculatorScreen: React.FC = () => {
     <Text style={styles.correctorText}>{formatWeight(organCorrect.plantMatter, 'plant matter')}</Text>
   )}
 </View>
-
             {/* Plant Matter Corrector */}
             {includePlantMatter && (
             <View style={[styles.correctorBox, styles.plantMatterCorrector]}>
