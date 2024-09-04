@@ -59,12 +59,12 @@ const FoodInfoScreen = ({ route, navigation }: Props) => {
     setUnit(selectedUnit);
 
     navigation.navigate('HomeTabs', { 
-        screen: 'Home',
-        params: { updatedIngredient } 
+      screen: 'HomeTabsHome', 
+      params: { updatedIngredient } 
     });
   };
 
-  const isNonMeat = ingredient.type === 'Vegetable' || ingredient.type === 'Fruit' || ingredient.type === 'Nut';
+  const isNonMeat = ingredient.type === 'Vegetable' || ingredient.type === 'Fruit' || ingredient.type === 'Nut & Seed';
 
   return (
     <KeyboardAvoidingView

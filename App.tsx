@@ -19,42 +19,55 @@ export type RootStackParamList = {
   FoodInfoScreen: { ingredient: Ingredient; editMode: boolean };
   SearchScreen: undefined;
   CalculatorScreen: { meat: number; bone: number; organ: number };
-  FAQScreen: undefined; // Add FAQScreen to the type definition
+  FAQScreen: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
 const HomeTabs = () => {
+  // Define sizes for each icon to ensure visual consistency
+  const homeIconSize = 36; // Adjust if needed
+  const settingsIconSize = 30; // Adjust if needed
+  const supportIconSize = 31; // Adjust if needed
+
   return (
     <Tab.Navigator
-      initialRouteName="Home"
+      initialRouteName="HomeTabsHome"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused }) => {
           let iconName;
           let label;
+          let iconSize;
 
-          if (route.name === 'Home') {
+          // Define icon name, label, and sizes for individual icons
+          if (route.name === 'HomeTabsHome') {
             iconName = 'home';
             label = 'Home';
+            iconSize = homeIconSize;
           } else if (route.name === 'Settings') {
             iconName = 'info';
             label = 'Info';
+            iconSize = settingsIconSize;
           } else if (route.name === 'Support') {
             iconName = 'headset';
             label = 'Support';
+            iconSize = supportIconSize;
           }
 
           return (
             <View style={{ alignItems: 'center' }}>
-              <MaterialIcons
-                name={iconName}
-                size={30}
-                color={'white'}
-              />
-              <Text style={{ color : 'white', fontSize: 12 }}>
-                {label}
-              </Text>
+              <View
+                style={{
+                  width: 35,
+                  height: 35,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <MaterialIcons name={iconName} size={iconSize} color={'white'} />
+              </View>
+              <Text style={{ color: 'white', fontSize: 12 }}>{label}</Text>
             </View>
           );
         },
@@ -69,21 +82,21 @@ const HomeTabs = () => {
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ 
+        options={{
           title: 'Settings',
           headerTitleAlign: 'center',
           headerStyle: {
             backgroundColor: 'white',
-        }, 
-        headerTitleStyle: {
-          fontSize: 25,
-          fontWeight: '600',
-          color: 'black',
-        },
-      }}
+          },
+          headerTitleStyle: {
+            fontSize: 25,
+            fontWeight: '600',
+            color: 'black',
+          },
+        }}
       />
       <Tab.Screen
-        name="Home"
+        name="HomeTabsHome"
         component={FoodInputScreen}
         options={{
           title: 'Raw Feeding Calculator',
@@ -100,18 +113,18 @@ const HomeTabs = () => {
       <Tab.Screen
         name="Support"
         component={SupportScreen}
-        options={{ 
+        options={{
           title: 'Support',
           headerTitleAlign: 'center',
           headerStyle: {
             backgroundColor: 'white',
-        }, 
-        headerTitleStyle: {
-          fontSize: 25,
-          fontWeight: '600',
-          color: 'black',
-        },
-      }}
+          },
+          headerTitleStyle: {
+            fontSize: 25,
+            fontWeight: '600',
+            color: 'black',
+          },
+        }}
       />
     </Tab.Navigator>
   );
@@ -135,7 +148,10 @@ const App: React.FC = () => {
           <Stack.Screen
             name="SearchScreen"
             component={SearchScreen}
-            options={{ title: 'Search Ingredients' }}
+            options={{
+              title: 'Search Ingredients',
+              headerBackTitleVisible: false, // Hides the text next to the back arrow
+            }}
           />
           <Stack.Screen name="CalculatorScreen" component={CalculatorScreen} />
           <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
@@ -149,7 +165,7 @@ const App: React.FC = () => {
             name="RawFeedingFAQScreen" 
             component={RawFeedingFAQScreen}
             options={{title: 'Raw Feeding FAQs'}}
-            />
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </UnitProvider>

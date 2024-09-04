@@ -12,7 +12,7 @@ export type Ingredient = {
   plantMatterWeight?: number;  // Combined weight for vegetable, fruit, and nuts
   totalWeight: number;
   unit: 'g' | 'kg' | 'lbs';
-  type?: 'Fruit' | 'Vegetable' | 'Nut'; // Type for non-meat ingredients
+  type?: 'Fruit' | 'Vegetable' | 'Nut & Seed'; // Type for non-meat ingredients
 };
 
 export type RootStackParamList = {
@@ -101,7 +101,7 @@ const FoodInputScreen: React.FC = () => {
       (sum, ing) =>
         ing.type === 'Fruit' ||
         ing.type === 'Vegetable' ||
-        ing.type === 'Nut'
+        ing.type === 'Nut & Seed'
           ? sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit)
           : sum,
       0
@@ -232,7 +232,7 @@ const FoodInputScreen: React.FC = () => {
               })
             }
           >
-            <Text style={styles.calculateButtonText}>Calculate</Text>
+            <Text style={styles.calculateButtonText}>Select Ratio & Calculate</Text>
           </TouchableOpacity>
         </View>
       </View>

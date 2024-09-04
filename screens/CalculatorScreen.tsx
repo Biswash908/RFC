@@ -240,7 +240,7 @@ const CalculatorScreen: React.FC = () => {
           {/* Second section */}
           <View style={styles.ratioTitleContainer}>
             <Text style={styles.ratioTitle}>
-            To add fruit/veg, set your Meat-Bone-Organ-Plant ratio:
+            To add fruit/veg, set your Meat:Bone:Organ:Plant ratio:
             </Text>
             <TouchableOpacity onPress={showRatioInfoAlert} style={styles.infoIcon}>
               <FontAwesome name="info-circle" size={20} color="#000080" />
