@@ -36,9 +36,26 @@ const RawFeedingFAQScreen = () => {
       answer: 'If your dog is hesitant, try introducing raw food gradually, mixing it with their current diet, or lightly searing the meat to enhance its aroma.',
     },
     {
-        question: 'Are there any recipes for dogs?',
-        answer: ''
-      },
+      question: 'Are there any recipes for dogs?',
+      answer: 'This is a simple recipe that makes about 1 kg and can be easily scaled up (suitable for freezing) or down to suit. You don’t need a grinder for this recipe.\n\n' +
+      '**Ingredients:**\n' +
+      '- 215 grams of chicken wings with tips, cut at the joints*\n' +
+      '- 500 grams of any boneless meat except chicken breast or rabbit**, chunked or minced\n' +
+      '- 100 grams of any liver\n' +
+      '- 100 grams of mixed vegetables (carrots, zucchini, spinach), finely chopped\n' +
+      '- 50 grams of fruits (blueberries, apples without seeds), finely chopped\n' +
+      '- 35 grams of nuts (unsalted almonds or peanuts), finely chopped (optional)\n\n' +
+      '**Instructions:**\n' +
+      '1. Mix all ingredients together in a large bowl.\n' +
+      '2. Ensure all components are well combined for a balanced meal.\n' +
+      '3. The recipe is ready to serve!\n\n' +
+      '**Storage:**\n' +
+      '- This mixture can be kept for 2-3 days in the fridge to ensure freshness.\n' +
+      '- For longer storage, you can freeze it in portions.\n\n' +
+      '**Notes:**\n' +
+      '- It’s not recommended to feed your dog chicken breast or rabbit as a sole meat source, as they are both low in fat.\n' +
+      '- Always make sure that the fruits and vegetables used are safe for dogs. Avoid toxic ingredients like grapes, raisins, onions, garlic, and macadamia nuts.\n'
+    },
       {
         question: 'How much should I feed my dogs?',
         answer: 'Puppies should be fed as much as they would eat (as they are still growing), ideally on a 75:15:10 ratio for meat only and 65:15:10:10 ratio when plants are added to their diet and adult dogs should be fed 2-3% of their ideal body weight on a normal 80:10:10 ratio for meat only and 70:10:10:10 when adding plants.'

@@ -6,7 +6,6 @@ import { useNavigation } from '@react-navigation/native';
 const SearchScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [ingredients, setIngredients] = useState([
-    { id: '1', name: 'Almonds, unsalted', meat: 0, bone: 0, organ: 0, vegetable: 0, fruit: 0, nuts: 100 },
     { id: '2', name: 'Alfalfa sprouts', meat: 0, bone: 0, organ: 0, vegetable: 100, fruit: 0, nuts: 0 },
     { id: '3', name: 'Apples', meat: 0, bone: 0, organ: 0, vegetable: 0, fruit: 100, nuts: 0 },
     { id: '4', name: 'Apricots, pitted', meat: 0, bone: 0, organ: 0, vegetable: 0, fruit: 100, nuts: 0 },
