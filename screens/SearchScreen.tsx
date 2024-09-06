@@ -113,7 +113,6 @@ const SearchScreen = () => {
     { id: '106', name: 'Lamb Wing', meat: 60, bone: 40, organ: 0, vegetable: 0, fruit: 0, nuts: 0 },
     { id: '107', name: 'Lentils', meat: 0, bone: 0, organ: 0, vegetable: 100, fruit: 0, nuts: 0 },
     { id: '108', name: 'Lettuce', meat: 0, bone: 0, organ: 0, vegetable: 100, fruit: 0, nuts: 0 },
-    { id: '109', name: 'Liver', meat: 0, bone: 0, organ: 100, vegetable: 0, fruit: 0, nuts: 0 },
     { id: '110', name: 'Lobster', meat: 100, bone: 0, organ: 0, vegetable: 0, fruit: 0, nuts: 0 },
     { id: '111', name: 'Lobster Tail', meat: 100, bone: 0, organ: 0, vegetable: 0, fruit: 0, nuts: 0 },
     { id: '112', name: 'Mussels', meat: 0, bone: 0, organ: 100, vegetable: 0, fruit: 0, nuts: 0 },

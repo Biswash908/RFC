@@ -180,24 +180,7 @@ const CalculatorScreen: React.FC = () => {
     setIncludePlantMatter(ratio.split(':').length === 4);
     calculateCorrectors(initialMeatWeight, initialBoneWeight, initialOrganWeight, plantMatter); // Recalculate immediately after setting ratio
   };
-  const showRatioInfoAlert = () => {
-    Alert.alert(
-      'Ratio Info',
-      '• Adult Dogs: 80% meat, 10% bone, 10% secreting organs\n\n' +
-        '• Puppies and pregnant/nursing dogs: 75% meat, 15% bone, 10% secreting organs\n\n' +
-        'The higher bone content for puppies and mothers provides essential calcium for growth and lactation.',
-      [{ text: 'OK' }]
-    );
-  };
-  const showRatioInfoAlert2 = () => {
-    Alert.alert(
-      'Ratio Info (With Plants)',
-      '• Adult Dogs: 70% meat, 10% bone, 10% secreting organs, 10% plant matter\n\n' +
-        '• Puppies and pregnant/nursing dogs: 65% meat, 15% bone, 10% secreting organs, 10% plant matter\n\n' +
-        'Including plant matter in a dog\'s diet provides essential vitamins, minerals, fiber, and antioxidants that support overall health, digestion, and immune function. These nutrients can enhance a dog\'s diet, particularly when carefully balanced with other components.',
-      [{ text: 'OK' }]
-    );
-  };
+
   const showInfoAlert = () => {
     Alert.alert(
       'Corrector Info',
@@ -222,9 +205,6 @@ const CalculatorScreen: React.FC = () => {
           {/* First section */}
           <View style={styles.ratioTitleContainer}>
             <Text style={styles.ratioTitle}>Select your Meat:Bone:Organ ratio</Text>
-            <TouchableOpacity onPress={showRatioInfoAlert} style={styles.infoIcon}>
-              <FontAwesome name="info-circle" size={20} color="#000080" />
-            </TouchableOpacity>
           </View>
           <View style={styles.ratioButtonsContainer}>
             <TouchableOpacity
@@ -250,9 +230,6 @@ const CalculatorScreen: React.FC = () => {
             <Text style={styles.ratioTitle}>
             To add fruit/veg, set your Meat:Bone:Organ:Plant ratio:
             </Text>
-            <TouchableOpacity onPress={showRatioInfoAlert2} style={styles.infoIcon}>
-              <FontAwesome name="info-circle" size={20} color="#000080" />
-            </TouchableOpacity>
           </View>
           <View style={styles.ratioButtonsContainer}>
             <TouchableOpacity
