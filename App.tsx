@@ -10,6 +10,7 @@ import CalculatorScreen from './screens/CalculatorScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import SupportScreen from './screens/SupportScreen';
 import FAQScreen from './screens/FAQScreen';
+import CustomRatioScreen from './screens/CustomRatioScreen';
 import RawFeedingFAQScreen from './screens/RawFeedingFAQScreen';
 import { UnitProvider } from './UnitContext';
 import Svg, { Path } from 'react-native-svg'; // Import for custom icons
@@ -155,6 +156,13 @@ const App: React.FC = () => {
             options={{
               title: 'Search Ingredients',
               headerBackTitleVisible: false, // Hides the text next to the back arrow
+            }}
+          />
+          <Stack.Screen
+            name="CustomRatioScreen"
+            component={CustomRatioScreen}
+            options={{ 
+              title: 'Custom Ratio'
             }}
           />
           <Stack.Screen name="CalculatorScreen" component={CalculatorScreen} />
