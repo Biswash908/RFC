@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
-import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUnit } from '../UnitContext';
@@ -10,7 +10,6 @@ type RootStackParamList = {
   FoodInfoScreen: { ingredient: Ingredient; editMode: boolean };
   SearchScreen: undefined;
   CalculatorScreen: { meat: number; bone: number; organ: number; plantmatter: number };
-  CustomRatioScreen: undefined; // Add this to the stack param list
 };
 
 type CalculatorScreenRouteProp = RouteProp<RootStackParamList, 'CalculatorScreen'>;
@@ -20,7 +19,7 @@ const CalculatorScreen: React.FC = () => {
   const navigation = useNavigation();
 
   const navigateToCustomRatio = () => {
-    navigation.navigate('CustomRatioScreen'); // Navigate to the custom ratio screen
+    navigation.navigate('CustomRatioScreen');
   };
 
   const [newPlantMatter, setNewPlantMatter] = useState<number>(10); // Default to 10, similar to others
@@ -54,134 +53,133 @@ const CalculatorScreen: React.FC = () => {
     navigation.setOptions({ title: 'Calculator' });
   }, [navigation]);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const loadRatios = async () => {
-        try {
-          const savedMeat = route.params?.meatRatio ?? (await AsyncStorage.getItem('meatRatio'));
-          const savedBone = route.params?.boneRatio ?? (await AsyncStorage.getItem('boneRatio'));
-          const savedOrgan = route.params?.organRatio ?? (await AsyncStorage.getItem('organRatio'));
-          const savedPlantMatter = route.params?.plantMatterRatio ?? (await AsyncStorage.getItem('plantMatterRatio'));
-          const savedRatio = await AsyncStorage.getItem('selectedRatio');
-          const savedIncludePlantMatter = await AsyncStorage.getItem('includePlantMatter');
-
-          if (savedRatio === 'custom') {
-            setCustomRatio({
-              meat: Number(savedMeat) || 0,
-              bone: Number(savedBone) || 0,
-              organ: Number(savedOrgan) || 0,
-              plantMatter: Number(savedPlantMatter) || 0,
-              includePlantMatter: savedIncludePlantMatter === 'true',
-            });
-            setSelectedRatio('custom');
-            setIncludePlantMatter(savedIncludePlantMatter === 'true');
-            setNewMeat(Number(savedMeat) || 0);
-            setNewBone(Number(savedBone) || 0);
-            setNewOrgan(Number(savedOrgan) || 0);
-            setNewPlantMatter(Number(savedPlantMatter) || 0);
-          } else if (savedRatio) {
-            setSelectedRatio(savedRatio);
-            setIncludePlantMatter(savedIncludePlantMatter === 'true');
-            setNewMeat(Number(savedMeat) || 0);
-            setNewBone(Number(savedBone) || 0);
-            setNewOrgan(Number(savedOrgan) || 0);
-            setNewPlantMatter(Number(savedPlantMatter) || 0);
-          } else {
-            setSelectedRatio('80:10:10');
-            setIncludePlantMatter(false);
-            setNewMeat(80);
-            setNewBone(10);
-            setNewOrgan(10);
-            setNewPlantMatter(0);
-          }
-        } catch (error) {
-          console.log('Failed to load ratios:', error);
+  useEffect(() => {
+    const loadRatios = async () => {
+      try {
+        const savedMeat = route.params?.meatRatio ?? (await AsyncStorage.getItem('meatRatio'));
+        const savedBone = route.params?.boneRatio ?? (await AsyncStorage.getItem('boneRatio'));
+        const savedOrgan = route.params?.organRatio ?? (await AsyncStorage.getItem('organRatio'));
+        const savedPlantMatter = route.params?.plantMatterRatio ?? (await AsyncStorage.getItem('plantMatterRatio'));
+        const savedRatio = await AsyncStorage.getItem('selectedRatio');
+        const savedIncludePlantMatter = await AsyncStorage.getItem('includePlantMatter');
+  
+        if (savedRatio === 'custom') {
+          setCustomRatio({
+            meat: Number(savedMeat) || 0,
+            bone: Number(savedBone) || 0,
+            organ: Number(savedOrgan) || 0,
+            plantMatter: Number(savedPlantMatter) || 0,
+            includePlantMatter: savedIncludePlantMatter === 'true',
+          });
+          setSelectedRatio('custom');
+          setIncludePlantMatter(savedIncludePlantMatter === 'true');
+          setNewMeat(Number(savedMeat) || 0);
+          setNewBone(Number(savedBone) || 0);
+          setNewOrgan(Number(savedOrgan) || 0);
+          setNewPlantMatter(Number(savedPlantMatter) || 0);
+        } else if (savedRatio) {
+          setSelectedRatio(savedRatio);
+          setIncludePlantMatter(savedIncludePlantMatter === 'true');
+          setNewMeat(Number(savedMeat) || 0);
+          setNewBone(Number(savedBone) || 0);
+          setNewOrgan(Number(savedOrgan) || 0);
+          setNewPlantMatter(Number(savedPlantMatter) || 0);
+        } else {
+          setSelectedRatio('80:10:10');
+          setIncludePlantMatter(false);
           setNewMeat(80);
           setNewBone(10);
           setNewOrgan(10);
           setNewPlantMatter(0);
-          setIncludePlantMatter(false);
+        }
+      } catch (error) {
+        console.log('Failed to load ratios:', error);
+        setNewMeat(80);
+        setNewBone(10);
+        setNewOrgan(10);
+        setNewPlantMatter(0);
+        setIncludePlantMatter(false);
+      }
+    };
+  
+    loadRatios();
+  }, [route.params]);
+  
+    useEffect(() => {
+      const saveRatios = async () => {
+        try {
+          await AsyncStorage.setItem('meatRatio', newMeat.toString());
+          await AsyncStorage.setItem('boneRatio', newBone.toString());
+          await AsyncStorage.setItem('organRatio', newOrgan.toString());
+          await AsyncStorage.setItem('plantMatterRatio', newPlantMatter.toString());
+          await AsyncStorage.setItem('selectedRatio', selectedRatio);
+          await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
+    
+          // Save additional data if the ratio is custom
+          if (selectedRatio === 'custom') {
+            await AsyncStorage.setItem('customMeatRatio', newMeat.toString());
+            await AsyncStorage.setItem('customBoneRatio', newBone.toString());
+            await AsyncStorage.setItem('customOrganRatio', newOrgan.toString());
+            await AsyncStorage.setItem('customPlantMatterRatio', newPlantMatter.toString());
+            await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
+          }
+        } catch (error) {
+          console.log('Failed to save ratios:', error);
         }
       };
 
-      loadRatios();
-    }, [route.params])
-  );
-
-  useEffect(() => {
-    const saveRatios = async () => {
-      try {
-        await AsyncStorage.setItem('meatRatio', newMeat.toString());
-        await AsyncStorage.setItem('boneRatio', newBone.toString());
-        await AsyncStorage.setItem('organRatio', newOrgan.toString());
-        await AsyncStorage.setItem('plantMatterRatio', newPlantMatter.toString());
-        await AsyncStorage.setItem('selectedRatio', selectedRatio);
-        await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
-
-        // Save additional data if the ratio is custom
-        if (selectedRatio === 'custom') {
-          await AsyncStorage.setItem('customMeatRatio', newMeat.toString());
-          await AsyncStorage.setItem('customBoneRatio', newBone.toString());
-          await AsyncStorage.setItem('customOrganRatio', newOrgan.toString());
-          await AsyncStorage.setItem('customPlantMatterRatio', newPlantMatter.toString());
-          await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
-        }
-      } catch (error) {
-        console.log('Failed to save ratios:', error);
+      if (newMeat !== null && newBone !== null && newOrgan !== null && newPlantMatter !== null) {
+        saveRatios();
+        calculateCorrectors(
+          initialMeatWeight,
+          initialBoneWeight,
+          initialOrganWeight,
+          includePlantMatter ? initialPlantMatterWeight : 0,
+          newMeat,
+          newBone,
+          newOrgan,
+          newPlantMatter,
+          includePlantMatter
+        );
       }
-    };
-
-    if (newMeat !== null && newBone !== null && newOrgan !== null && newPlantMatter !== null) {
-      saveRatios();
-      calculateCorrectors(
-        initialMeatWeight,
-        initialBoneWeight,
-        initialOrganWeight,
-        includePlantMatter ? initialPlantMatterWeight : 0,
-        newMeat,
-        newBone,
-        newOrgan,
-        newPlantMatter,
-        includePlantMatter
-      );
-    }
-  }, [newMeat, newBone, newOrgan, newPlantMatter, selectedRatio, includePlantMatter]);
+    }, [newMeat, newBone, newOrgan, newPlantMatter, selectedRatio, includePlantMatter]);
+    
 
   function calculateCorrectors(
-    meatWeight: number,
-    boneWeight: number,
-    organWeight: number,
-    plantMatterWeight: number,
-    newMeat: number,
-    newBone: number,
-    newOrgan: number,
-    newPlantMatter: number,
-    includePlantMatter: boolean
+    meatWeight,
+    boneWeight,
+    organWeight,
+    plantMatterWeight,
+    newMeat,
+    newBone,
+    newOrgan,
+    newPlantMatter,
+    includePlantMatter
   ) {
     let meatCorrect = { bone: 0, organ: 0, plantMatter: 0 };
     let boneCorrect = { meat: 0, organ: 0, plantMatter: 0 };
     let organCorrect = { meat: 0, bone: 0, plantMatter: 0 };
     let plantMatterCorrect = { meat: 0, bone: 0, organ: 0 };
-
+  
     if (includePlantMatter) {
       if (meatWeight > 0) {
         meatCorrect.bone = ((meatWeight / newMeat) * newBone) - boneWeight;
         meatCorrect.organ = ((meatWeight / newMeat) * newOrgan) - organWeight;
         meatCorrect.plantMatter = ((meatWeight / newMeat) * newPlantMatter) - plantMatterWeight;
       }
-
+  
       if (boneWeight > 0) {
         boneCorrect.meat = ((boneWeight / newBone) * newMeat) - meatWeight;
         boneCorrect.organ = ((boneWeight / newBone) * newOrgan) - organWeight;
         boneCorrect.plantMatter = ((boneWeight / newBone) * newPlantMatter) - plantMatterWeight;
       }
-
+  
       if (organWeight > 0) {
         organCorrect.meat = ((organWeight / newOrgan) * newMeat) - meatWeight;
         organCorrect.bone = ((organWeight / newOrgan) * newBone) - boneWeight;
         organCorrect.plantMatter = ((organWeight / newOrgan) * newPlantMatter) - plantMatterWeight;
       }
-
+  
       if (plantMatterWeight > 0) {
         plantMatterCorrect.meat = ((plantMatterWeight / newPlantMatter) * newMeat) - meatWeight;
         plantMatterCorrect.bone = ((plantMatterWeight / newPlantMatter) * newBone) - boneWeight;
@@ -192,18 +190,18 @@ const CalculatorScreen: React.FC = () => {
         meatCorrect.bone = ((meatWeight / newMeat) * newBone) - boneWeight;
         meatCorrect.organ = ((meatWeight / newMeat) * newOrgan) - organWeight;
       }
-
+  
       if (boneWeight > 0) {
         boneCorrect.meat = ((boneWeight / newBone) * newMeat) - meatWeight;
         boneCorrect.organ = ((boneWeight / newBone) * newOrgan) - organWeight;
       }
-
+  
       if (organWeight > 0) {
         organCorrect.meat = ((organWeight / newOrgan) * newMeat) - meatWeight;
         organCorrect.bone = ((organWeight / newOrgan) * newBone) - boneWeight;
       }
     }
-
+  
     setMeatCorrect(meatCorrect);
     setBoneCorrect(boneCorrect);
     setOrganCorrect(organCorrect);
@@ -219,7 +217,7 @@ const CalculatorScreen: React.FC = () => {
     setNewPlantMatter(plantMatter);
     setSelectedRatio(ratio);
     setIncludePlantMatter(ratio.split(':').length === 4);
-
+  
     if (ratio === 'custom') {
       setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter: ratio.split(':').length === 4 });
       // Save custom ratio in AsyncStorage
@@ -232,10 +230,10 @@ const CalculatorScreen: React.FC = () => {
     } else {
       AsyncStorage.setItem('selectedRatio', ratio);
     }
-
+  
     calculateCorrectors(initialMeatWeight, initialBoneWeight, initialOrganWeight, plantMatter, meat, bone, organ, plantMatter, includePlantMatter);
   };
-
+  
   const showInfoAlert = () => {
     Alert.alert(
       'Corrector Info',
@@ -250,42 +248,68 @@ const CalculatorScreen: React.FC = () => {
     return `${action} ${formattedValue} ${unit} of ${ingredient}`;
   };
 
+  const handleCustomRatio = () => {
+    Alert.prompt(
+      "Custom Ratio",
+      "Enter your custom Meat:Bone:Organ:Plant ratio (e.g., 60:20:10:10):",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "OK",
+          onPress: (input) => {
+            const ratios = input.split(":").map((ratio) => parseInt(ratio.trim()));
+            if (ratios.length === 3 || ratios.length === 4) {
+              const [meat, bone, organ, plantMatter = 0] = ratios;
+              setRatio(meat, bone, organ, plantMatter, input);
+            } else {
+              Alert.alert("Invalid Ratio", "Please enter a valid ratio format.");
+            }
+          }
+        }
+      ],
+      "plain-text"
+    );
+  };
+  
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
           <View style={styles.topBar} />
-
+  
           {/* First section */}
           <View style={styles.ratioTitleContainer}>
             <Text style={styles.ratioTitle}>Select your Meat:Bone:Organ ratio</Text>
           </View>
           <View style={styles.ratioButtonsContainer}>
-            <TouchableOpacity
-              style={[
-                styles.ratioButton,
-                selectedRatio === '80:10:10' && selectedRatio !== 'custom' && styles.selectedRatioButton,
-              ]}
-              onPress={() => setRatio(80, 10, 10, 0, '80:10:10')}
-            >
-              <Text style={[styles.ratioButtonText, selectedRatio === '80:10:10' && selectedRatio !== 'custom' && { color: 'white' }]}>
-                80:10:10
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.ratioButton,
-                selectedRatio === '75:15:10' && selectedRatio !== 'custom' && styles.selectedRatioButton,
-              ]}
-              onPress={() => setRatio(75, 15, 10, 0, '75:15:10')}
-            >
-              <Text style={[styles.ratioButtonText, selectedRatio === '75:15:10' && selectedRatio !== 'custom' && { color: 'white' }]}>
-                75:15:10
-              </Text>
-            </TouchableOpacity>
-          </View>
-
+          <TouchableOpacity
+            style={[
+              styles.ratioButton,
+              selectedRatio === '80:10:10' && selectedRatio !== 'custom' && styles.selectedRatioButton,
+            ]}
+            onPress={() => setRatio(80, 10, 10, 0, '80:10:10')}
+          >
+            <Text style={[styles.ratioButtonText, selectedRatio === '80:10:10' && selectedRatio !== 'custom' && { color: 'white' }]}>
+              80:10:10
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.ratioButton,
+              selectedRatio === '75:15:10' && selectedRatio !== 'custom' && styles.selectedRatioButton,
+            ]}
+            onPress={() => setRatio(75, 15, 10, 0, '75:15:10')}
+          >
+            <Text style={[styles.ratioButtonText, selectedRatio === '75:15:10' && selectedRatio !== 'custom' && { color: 'white' }]}>
+              75:15:10
+            </Text>
+          </TouchableOpacity>
+        </View>
+  
           {/* Second section */}
           <View style={styles.ratioTitleContainer}>
             <Text style={styles.ratioTitle}>
@@ -293,29 +317,29 @@ const CalculatorScreen: React.FC = () => {
             </Text>
           </View>
           <View style={styles.ratioButtonsContainer}>
-            <TouchableOpacity
-              style={[
-                styles.ratioButton,
-                selectedRatio === '70:10:10:10' && selectedRatio !== 'custom' && styles.selectedRatioButton,
-              ]}
-              onPress={() => setRatio(70, 10, 10, 10, '70:10:10:10')}
-            >
-              <Text style={[styles.ratioButtonText, selectedRatio === '70:10:10:10' && selectedRatio !== 'custom' && { color: 'white' }]}>
-                70:10:10:10
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.ratioButton,
-                selectedRatio === '65:15:10:10' && selectedRatio !== 'custom' && styles.selectedRatioButton,
-              ]}
-              onPress={() => setRatio(65, 15, 10, 10, '65:15:10:10')}
-            >
-              <Text style={[styles.ratioButtonText, selectedRatio === '65:15:10:10' && selectedRatio !== 'custom' && { color: 'white' }]}>
-                65:15:10:10
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[
+              styles.ratioButton,
+              selectedRatio === '70:10:10:10' && selectedRatio !== 'custom' && styles.selectedRatioButton,
+            ]}
+            onPress={() => setRatio(70, 10, 10, 10, '70:10:10:10')}
+          >
+            <Text style={[styles.ratioButtonText, selectedRatio === '70:10:10:10' && selectedRatio !== 'custom' && { color: 'white' }]}>
+              70:10:10:10
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.ratioButton,
+              selectedRatio === '65:15:10:10' && selectedRatio !== 'custom' && styles.selectedRatioButton,
+            ]}
+            onPress={() => setRatio(65, 15, 10, 10, '65:15:10:10')}
+          >
+            <Text style={[styles.ratioButtonText, selectedRatio === '65:15:10:10' && selectedRatio !== 'custom' && { color: 'white' }]}>
+              65:15:10:10
+            </Text>
+          </TouchableOpacity>
+        </View>
 
           {/* Custom Ratio Button */}
           <TouchableOpacity
@@ -323,13 +347,13 @@ const CalculatorScreen: React.FC = () => {
               styles.customButton,
               selectedRatio === 'custom' ? styles.selectedCustomButton : { backgroundColor: 'white', borderColor: 'navy' },
             ]}
-            onPress={navigateToCustomRatio} // Correct navigation action
+            onPress={navigateToCustomRatio}
           >
             <Text style={[
               styles.customButtonText,
               selectedRatio === 'custom' ? { color: 'white' } : { color: 'black' }
             ]}>
-              {selectedRatio === 'custom'
+              {selectedRatio === 'custom' 
                 ? `${customRatio.meat}:${customRatio.bone}:${customRatio.organ}${includePlantMatter ? `:${customRatio.plantMatter}` : ''}` 
                 : "Custom Ratio"}
             </Text>
@@ -344,44 +368,44 @@ const CalculatorScreen: React.FC = () => {
 
           <View style={styles.correctorContainer}>
             {/* Meat Corrector */}
-            <View style={[styles.correctorBox, styles.meatCorrector]}>
-              <Text style={styles.correctorTitle}>If Meat is correct</Text>
-              <Text style={styles.correctorText}>{formatWeight(meatCorrect.bone, 'bones')}</Text>
-              <Text style={styles.correctorText}>{formatWeight(meatCorrect.organ, 'organs')}</Text>
-              {includePlantMatter && (
-                <Text style={styles.correctorText}>{formatWeight(meatCorrect.plantMatter, 'plant matter')}</Text>
-              )}
-            </View>
+        <View style={[styles.correctorBox, styles.meatCorrector]}>
+          <Text style={styles.correctorTitle}>If Meat is correct</Text>
+          <Text style={styles.correctorText}>{formatWeight(meatCorrect.bone, 'bones')}</Text>
+          <Text style={styles.correctorText}>{formatWeight(meatCorrect.organ, 'organs')}</Text>
+          {includePlantMatter && (
+            <Text style={styles.correctorText}>{formatWeight(meatCorrect.plantMatter, 'plant matter')}</Text>
+          )}
+        </View>
 
-            {/* Bone Corrector */}
-            <View style={[styles.correctorBox, styles.boneCorrector]}>
-              <Text style={styles.correctorTitle}>If Bone is correct</Text>
-              <Text style={styles.correctorText}>{formatWeight(boneCorrect.meat, 'meat')}</Text>
-              <Text style={styles.correctorText}>{formatWeight(boneCorrect.organ, 'organs')}</Text>
-              {includePlantMatter && (
-                <Text style={styles.correctorText}>{formatWeight(boneCorrect.plantMatter, 'plant matter')}</Text>
-              )}
-            </View>
+        {/* Bone Corrector */}
+        <View style={[styles.correctorBox, styles.boneCorrector]}>
+          <Text style={styles.correctorTitle}>If Bone is correct</Text>
+          <Text style={styles.correctorText}>{formatWeight(boneCorrect.meat, 'meat')}</Text>
+          <Text style={styles.correctorText}>{formatWeight(boneCorrect.organ, 'organs')}</Text>
+          {includePlantMatter && (
+            <Text style={styles.correctorText}>{formatWeight(boneCorrect.plantMatter, 'plant matter')}</Text>
+          )}
+        </View>
 
-            {/* Organ Corrector */}
-            <View style={[styles.correctorBox, styles.organCorrector]}>
-              <Text style={styles.correctorTitle}>If Organ is correct</Text>
-              <Text style={styles.correctorText}>{formatWeight(organCorrect.meat, 'meat')}</Text>
-              <Text style={styles.correctorText}>{formatWeight(organCorrect.bone, 'bones')}</Text>
-              {includePlantMatter && (
-                <Text style={styles.correctorText}>{formatWeight(organCorrect.plantMatter, 'plant matter')}</Text>
-              )}
-            </View>
+        {/* Organ Corrector */}
+        <View style={[styles.correctorBox, styles.organCorrector]}>
+          <Text style={styles.correctorTitle}>If Organ is correct</Text>
+          <Text style={styles.correctorText}>{formatWeight(organCorrect.meat, 'meat')}</Text>
+          <Text style={styles.correctorText}>{formatWeight(organCorrect.bone, 'bones')}</Text>
+          {includePlantMatter && (
+            <Text style={styles.correctorText}>{formatWeight(organCorrect.plantMatter, 'plant matter')}</Text>
+          )}
+        </View>
 
             {/* Plant Matter Corrector */}
             {includePlantMatter && (
-              <View style={[styles.correctorBox, styles.plantMatterCorrector]}>
-                <Text style={styles.correctorTitle}>If Plant Matter is correct</Text>
-                <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.meat, 'meat')}</Text>
-                <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.bone, 'bones')}</Text>
-                <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.organ, 'organs')}</Text>
-              </View>
-            )}
+            <View style={[styles.correctorBox, styles.plantMatterCorrector]}>
+              <Text style={styles.correctorTitle}>If Plant Matter is correct</Text>
+              <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.meat, 'meat')}</Text>
+              <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.bone, 'bones')}</Text>
+              <Text style={styles.correctorText}>{formatWeight(plantMatterCorrect.organ, 'organs')}</Text>
+            </View>
+)}
           </View>
         </KeyboardAvoidingView>
       </ScrollView>

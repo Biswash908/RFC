@@ -12,6 +12,8 @@ const CustomRatioScreen: React.FC = () => {
   const [boneRatio, setBoneRatio] = useState<number>(0);
   const [organRatio, setOrganRatio] = useState<number>(0);
   const [plantMatterRatio, setPlantMatterRatio] = useState<number>(0);
+  
+  const [buttonText, setButtonText] = useState('Use Ratio');
 
   // Load saved custom ratio from AsyncStorage when the component mounts
   useEffect(() => {
@@ -58,26 +60,33 @@ const CustomRatioScreen: React.FC = () => {
     } 
 
      // Save the custom ratios in AsyncStorage
-  try {
-    await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
-    await AsyncStorage.setItem('meatRatio', meatRatio.toString());
-    await AsyncStorage.setItem('boneRatio', boneRatio.toString());
-    await AsyncStorage.setItem('organRatio', organRatio.toString());
-    await AsyncStorage.setItem('plantMatterRatio', plantMatterRatio.toString());
-
-    // Navigate to CalculatorScreen with the ratios
-    navigation.navigate('CalculatorScreen', {
-      meatRatio,
-      boneRatio,
-      organRatio,
-      plantMatterRatio: includePlantMatter ? plantMatterRatio : 0,
-      includePlantMatter,
-      selectedRatio: 'custom' // Indicate that a custom ratio is being used
-    });
-  } catch (error) {
-    console.log('Failed to save ratios:', error);
-  }
-};
+     try {
+      await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
+      await AsyncStorage.setItem('meatRatio', meatRatio.toString());
+      await AsyncStorage.setItem('boneRatio', boneRatio.toString());
+      await AsyncStorage.setItem('organRatio', organRatio.toString());
+      await AsyncStorage.setItem('plantMatterRatio', plantMatterRatio.toString());
+  
+      const ratioString = includePlantMatter
+        ? `${meatRatio}:${boneRatio}:${organRatio}:${plantMatterRatio}`
+        : `${meatRatio}:${boneRatio}:${organRatio}`;
+  
+      // Update the button text with the used ratio
+      setButtonText(ratioString);
+  
+      // Navigate to CalculatorScreen with the ratios and update immediately
+      navigation.navigate('CalculatorScreen', {
+        meatRatio,
+        boneRatio,
+        organRatio,
+        plantMatterRatio: includePlantMatter ? plantMatterRatio : 0,
+        includePlantMatter,
+        selectedRatio: ratioString // Pass the selected custom ratio
+      });
+    } catch (error) {
+      console.log('Failed to save ratios:', error);
+    }
+  };
 
 useFocusEffect(
   React.useCallback(() => {
