@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CustomRatioScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<{ params: { onSave: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => void } }, 'params'>>();
 
   // State for ratios
   const [includePlantMatter, setIncludePlantMatter] = useState(false);
@@ -45,74 +46,95 @@ const CustomRatioScreen: React.FC = () => {
       : meatRatio + boneRatio + organRatio;
   };
 
+  const handleTogglePlantMatter = async (value: boolean) => {
+    setIncludePlantMatter(value);
+    if (!value) {
+      setPlantMatterRatio(0);
+    } else {
+      try {
+        const savedPlantMatterRatio = await AsyncStorage.getItem('plantMatterRatio');
+        setPlantMatterRatio(savedPlantMatterRatio ? parseFloat(savedPlantMatterRatio) : 0);
+      } catch (error) {
+        console.log('Failed to load plant matter ratio:', error);
+        setPlantMatterRatio(0);
+      }
+    }
+  };
+
   // Validate ratios and handle adding ratio
   const handleAddRatio = async () => {
     const totalRatio = calculateTotalRatio();
     const difference = totalRatio - 100;
-  
-    if (difference !== 0) {
-      if (difference > 0) {
-        Alert.alert('Error', `You’re ${difference.toFixed(2)}% over the limit. Adjust the values so the total ratio equals 100%.`);
-      } else {
-        Alert.alert('Error', `You’re ${Math.abs(difference).toFixed(2)}% under 100%. Add more to make the ratio total 100%.`);
-      }
-      return;
-    } 
 
-     // Save the custom ratios in AsyncStorage
-     try {
+    if (difference !== 0) {
+      Alert.alert(
+        'Error',
+        difference > 0
+          ? `You’re ${difference.toFixed(2)}% over the limit. Adjust the values so the total ratio equals 100%.`
+          : `You’re ${Math.abs(difference).toFixed(2)}% under 100%. Add more to make the ratio total 100%.`
+      );
+      return;
+    }
+
+    try {
       await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
       await AsyncStorage.setItem('meatRatio', meatRatio.toString());
       await AsyncStorage.setItem('boneRatio', boneRatio.toString());
       await AsyncStorage.setItem('organRatio', organRatio.toString());
       await AsyncStorage.setItem('plantMatterRatio', plantMatterRatio.toString());
-  
+
       const ratioString = includePlantMatter
         ? `${meatRatio}:${boneRatio}:${organRatio}:${plantMatterRatio}`
         : `${meatRatio}:${boneRatio}:${organRatio}`;
-  
-      // Update the button text with the used ratio
+
       setButtonText(ratioString);
-  
-      // Navigate to CalculatorScreen with the ratios and update immediately
-      navigation.navigate('CalculatorScreen', {
+
+      route.params.onSave(
         meatRatio,
         boneRatio,
         organRatio,
-        plantMatterRatio: includePlantMatter ? plantMatterRatio : 0,
-        includePlantMatter,
-        selectedRatio: ratioString // Pass the selected custom ratio
-      });
+        includePlantMatter ? plantMatterRatio : 0,
+        includePlantMatter
+      );
+      navigation.goBack();
     } catch (error) {
       console.log('Failed to save ratios:', error);
+      Alert.alert('Error', 'Failed to save the ratio. Please try again.');
     }
   };
 
-useFocusEffect(
-  React.useCallback(() => {
-    // Reload saved ratios when returning to this screen
-    const loadSavedRatios = async () => {
-      const savedIncludePlantMatter = await AsyncStorage.getItem('includePlantMatter');
-      const savedMeatRatio = await AsyncStorage.getItem('meatRatio');
-      const savedBoneRatio = await AsyncStorage.getItem('boneRatio');
-      const savedOrganRatio = await AsyncStorage.getItem('organRatio');
-      const savedPlantMatterRatio = await AsyncStorage.getItem('plantMatterRatio');
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadSavedRatios = async () => {
+        try {
+          const savedIncludePlantMatter = await AsyncStorage.getItem('includePlantMatter');
+          const savedMeatRatio = await AsyncStorage.getItem('meatRatio');
+          const savedBoneRatio = await AsyncStorage.getItem('boneRatio');
+          const savedOrganRatio = await AsyncStorage.getItem('organRatio');
+          const savedPlantMatterRatio = await AsyncStorage.getItem('plantMatterRatio');
 
-      setIncludePlantMatter(savedIncludePlantMatter === 'true');
-      setMeatRatio(savedMeatRatio ? parseFloat(savedMeatRatio) : 0);
-      setBoneRatio(savedBoneRatio ? parseFloat(savedBoneRatio) : 0);
-      setOrganRatio(savedOrganRatio ? parseFloat(savedOrganRatio) : 0);
-      setPlantMatterRatio(savedPlantMatterRatio ? parseFloat(savedPlantMatterRatio) : 0);
-    };
+          setIncludePlantMatter(savedIncludePlantMatter === 'true');
+          setMeatRatio(savedMeatRatio ? parseFloat(savedMeatRatio) : 0);
+          setBoneRatio(savedBoneRatio ? parseFloat(savedBoneRatio) : 0);
+          setOrganRatio(savedOrganRatio ? parseFloat(savedOrganRatio) : 0);
+          setPlantMatterRatio(savedPlantMatterRatio ? parseFloat(savedPlantMatterRatio) : 0);
+        } catch (error) {
+          console.log('Failed to load saved ratios:', error);
+        }
+      };
 
-    loadSavedRatios();
-  }, [])
-);
+      loadSavedRatios();
+    }, [])
+  );
 
   const handleInputChange = (value: string, setState: React.Dispatch<React.SetStateAction<number>>) => {
     // Allow decimal input and sanitize the input
     const sanitizedValue = parseFloat(value.replace(/[^0-9.]/g, ''));
-    setState(isNaN(sanitizedValue) ? 0 : sanitizedValue);
+    if (isNaN(sanitizedValue)) {
+      setState(0);  // Set to zero if input is invalid
+    } else {
+      setState(sanitizedValue);
+    }
   };
 
   return (
@@ -126,10 +148,7 @@ useFocusEffect(
         <Text style={styles.toggleLabel}>Include Plant Matter</Text>
         <Switch
           value={includePlantMatter}
-          onValueChange={(value) => {
-            setIncludePlantMatter(value);
-            setPlantMatterRatio(0); // Reset plant matter ratio when toggling
-          }}
+          onValueChange={handleTogglePlantMatter}
         />
       </View>
 
@@ -184,7 +203,7 @@ useFocusEffect(
 
       {/* Add Ratio Button */}
       <TouchableOpacity style={styles.addButton} onPress={handleAddRatio}>
-        <Text style={styles.addButtonText}>Use Ratio</Text>
+        <Text style={styles.addButtonText}>{buttonText}</Text>
       </TouchableOpacity>
     </View>
   );

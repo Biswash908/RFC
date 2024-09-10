@@ -20,7 +20,7 @@ const CalculatorScreen: React.FC = () => {
   const navigation = useNavigation();
 
   const navigateToCustomRatio = () => {
-    navigation.navigate('CustomRatioScreen');
+    navigation.navigate('CustomRatioScreen'); // Navigate to the custom ratio screen
   };
 
   const [newPlantMatter, setNewPlantMatter] = useState<number>(10); // Default to 10, similar to others
@@ -217,40 +217,24 @@ const CalculatorScreen: React.FC = () => {
     setNewBone(bone);
     setNewOrgan(organ);
     setNewPlantMatter(plantMatter);
-    
-    // Determine includePlantMatter based on actual plant matter value
-    const plantMatterIncluded = plantMatter > 0;
-    setIncludePlantMatter(plantMatterIncluded);
-    
     setSelectedRatio(ratio);
+    setIncludePlantMatter(ratio.split(':').length === 4);
 
     if (ratio === 'custom') {
-        setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter: plantMatterIncluded });
-        
-        // Save custom ratio in AsyncStorage
-        AsyncStorage.setItem('meatRatio', meat.toString());
-        AsyncStorage.setItem('boneRatio', bone.toString());
-        AsyncStorage.setItem('organRatio', organ.toString());
-        AsyncStorage.setItem('plantMatterRatio', plantMatter.toString());
-        AsyncStorage.setItem('selectedRatio', 'custom');
-        AsyncStorage.setItem('includePlantMatter', plantMatterIncluded.toString());
+      setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter: ratio.split(':').length === 4 });
+      // Save custom ratio in AsyncStorage
+      AsyncStorage.setItem('meatRatio', meat.toString());
+      AsyncStorage.setItem('boneRatio', bone.toString());
+      AsyncStorage.setItem('organRatio', organ.toString());
+      AsyncStorage.setItem('plantMatterRatio', plantMatter.toString());
+      AsyncStorage.setItem('selectedRatio', 'custom');
+      AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
     } else {
-        AsyncStorage.setItem('selectedRatio', ratio);
+      AsyncStorage.setItem('selectedRatio', ratio);
     }
 
-    calculateCorrectors(
-        initialMeatWeight,
-        initialBoneWeight,
-        initialOrganWeight,
-        plantMatterIncluded ? initialPlantMatterWeight : 0,
-        meat,
-        bone,
-        organ,
-        plantMatter,
-        plantMatterIncluded
-    );
-};
-
+    calculateCorrectors(initialMeatWeight, initialBoneWeight, initialOrganWeight, plantMatter, meat, bone, organ, plantMatter, includePlantMatter);
+  };
 
   const showInfoAlert = () => {
     Alert.alert(

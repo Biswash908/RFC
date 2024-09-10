@@ -20,12 +20,21 @@ const CalculatorScreen: React.FC = () => {
   const navigation = useNavigation();
 
   const navigateToCustomRatio = () => {
-    navigation.navigate('CustomRatioScreen');
+    navigation.navigate('CustomRatioScreen', {
+      onSave: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => {
+        setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter });
+        setSelectedRatio('custom');
+        
+        // Update the correctors immediately after setting custom ratio
+        setRatio(meat, bone, organ, plantMatter, 'custom');
+      },
+    });
   };
 
   const [newPlantMatter, setNewPlantMatter] = useState<number>(10); // Default to 10, similar to others
   const [plantMatterCorrect, setPlantMatterCorrect] = useState<{ meat: number; bone: number; organ: number }>({ meat: 0, bone: 0, organ: 0 });
   const [includePlantMatter, setIncludePlantMatter] = useState<boolean>(false);
+  
 
   const initialMeatWeight = route.params?.meat ?? 0;
   const initialBoneWeight = route.params?.bone ?? 0;
@@ -213,44 +222,40 @@ const CalculatorScreen: React.FC = () => {
   }
 
   const setRatio = (meat: number, bone: number, organ: number, plantMatter: number, ratio: string) => {
+    const isFourPartRatio = plantMatter > 0 || includePlantMatter || ratio.split(':').length === 4;
+  
     setNewMeat(meat);
     setNewBone(bone);
     setNewOrgan(organ);
-    setNewPlantMatter(plantMatter);
-    
-    // Determine includePlantMatter based on actual plant matter value
-    const plantMatterIncluded = plantMatter > 0;
-    setIncludePlantMatter(plantMatterIncluded);
-    
+    setNewPlantMatter(isFourPartRatio ? plantMatter : 0);
     setSelectedRatio(ratio);
-
+    setIncludePlantMatter(isFourPartRatio);
+  
     if (ratio === 'custom') {
-        setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter: plantMatterIncluded });
-        
-        // Save custom ratio in AsyncStorage
-        AsyncStorage.setItem('meatRatio', meat.toString());
-        AsyncStorage.setItem('boneRatio', bone.toString());
-        AsyncStorage.setItem('organRatio', organ.toString());
-        AsyncStorage.setItem('plantMatterRatio', plantMatter.toString());
-        AsyncStorage.setItem('selectedRatio', 'custom');
-        AsyncStorage.setItem('includePlantMatter', plantMatterIncluded.toString());
+      setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter: isFourPartRatio });
+      AsyncStorage.setItem('meatRatio', meat.toString());
+      AsyncStorage.setItem('boneRatio', bone.toString());
+      AsyncStorage.setItem('organRatio', organ.toString());
+      AsyncStorage.setItem('plantMatterRatio', plantMatter.toString());
+      AsyncStorage.setItem('selectedRatio', 'custom');
+      AsyncStorage.setItem('includePlantMatter', isFourPartRatio.toString());
     } else {
-        AsyncStorage.setItem('selectedRatio', ratio);
+      AsyncStorage.setItem('selectedRatio', ratio);
     }
-
+  
+    // Call calculateCorrectors with the appropriate values
     calculateCorrectors(
-        initialMeatWeight,
-        initialBoneWeight,
-        initialOrganWeight,
-        plantMatterIncluded ? initialPlantMatterWeight : 0,
-        meat,
-        bone,
-        organ,
-        plantMatter,
-        plantMatterIncluded
+      initialMeatWeight,
+      initialBoneWeight,
+      initialOrganWeight,
+      isFourPartRatio ? initialPlantMatterWeight : 0,
+      meat,
+      bone,
+      organ,
+      plantMatter,
+      isFourPartRatio
     );
-};
-
+  };  
 
   const showInfoAlert = () => {
     Alert.alert(
@@ -264,6 +269,17 @@ const CalculatorScreen: React.FC = () => {
     const formattedValue = isNaN(value) ? '0.00' : Math.abs(value).toFixed(2);
     const action = value > 0 ? 'Add' : value < 0 ? 'Remove' : 'Add';
     return `${action} ${formattedValue} ${unit} of ${ingredient}`;
+  };
+
+  const handleCustomRatioButtonPress = () => {
+    setSelectedRatio('custom');
+    setRatio(
+      customRatio.meat,
+      customRatio.bone,
+      customRatio.organ,
+      customRatio.includePlantMatter ? customRatio.plantMatter : 0,
+      'custom'
+    );
   };
 
   return (
@@ -335,21 +351,21 @@ const CalculatorScreen: React.FC = () => {
 
           {/* Custom Ratio Button */}
           <TouchableOpacity
-            style={[
-              styles.customButton,
-              selectedRatio === 'custom' ? styles.selectedCustomButton : { backgroundColor: 'white', borderColor: 'navy' },
-            ]}
-            onPress={navigateToCustomRatio} // Correct navigation action
-          >
-            <Text style={[
-              styles.customButtonText,
-              selectedRatio === 'custom' ? { color: 'white' } : { color: 'black' }
-            ]}>
-              {selectedRatio === 'custom'
-                ? `${customRatio.meat}:${customRatio.bone}:${customRatio.organ}${includePlantMatter ? `:${customRatio.plantMatter}` : ''}` 
-                : "Custom Ratio"}
-            </Text>
-          </TouchableOpacity>
+  style={[
+    styles.customButton,
+    selectedRatio === 'custom' ? styles.selectedCustomButton : { backgroundColor: 'white', borderColor: 'navy' },
+  ]}
+  onPress={navigateToCustomRatio}  // Correct navigation action to go to CustomRatioScreen
+>
+  <Text style={[
+    styles.customButtonText,
+    selectedRatio === 'custom' ? { color: 'white' } : { color: 'black' }
+  ]}>
+    {selectedRatio === 'custom'
+      ? `${customRatio.meat}:${customRatio.bone}:${customRatio.organ}${includePlantMatter ? `:${customRatio.plantMatter}` : ''}` 
+      : "Custom Ratio"}
+  </Text>
+</TouchableOpacity>
 
           <View style={styles.correctorInfoContainer}>
             <Text style={styles.correctorInfoText}>Use the corrector to achieve the intended ratio:</Text>
