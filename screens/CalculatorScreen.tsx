@@ -20,7 +20,15 @@ const CalculatorScreen: React.FC = () => {
   const navigation = useNavigation();
 
   const navigateToCustomRatio = () => {
-    navigation.navigate('CustomRatioScreen');
+    navigation.navigate('CustomRatioScreen', {
+      onSave: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => {
+        setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter });
+        setSelectedRatio('custom');
+        
+        // Update the correctors immediately after setting custom ratio
+        setRatio(meat, bone, organ, plantMatter, 'custom');
+      },
+    });
   };
 
   const [newPlantMatter, setNewPlantMatter] = useState<number>(10); // Default to 10, similar to others

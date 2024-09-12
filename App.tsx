@@ -13,6 +13,7 @@ import FAQScreen from './screens/FAQScreen';
 import CustomRatioScreen from './screens/CustomRatioScreen';
 import RawFeedingFAQScreen from './screens/RawFeedingFAQScreen';
 import { UnitProvider } from './UnitContext';
+import { SaveProvider } from './SaveProvider'; // Corrected path to SaveProvider
 import Svg, { Path } from 'react-native-svg'; // Import for custom icons
 
 export type RootStackParamList = {
@@ -29,8 +30,8 @@ const Tab = createBottomTabNavigator();
 // Custom SVG Icon Components
 const HomeIcon = ({ color }) => (
   <Svg width="35" height="42" viewBox="0 0 24 23.5" fill={color}>
-  <Path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-</Svg>
+    <Path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+  </Svg>
 );
 
 const SettingsIcon = ({ color }) => (
@@ -67,12 +68,12 @@ const HomeTabs = () => {
 
           return (
             <View style={{ alignItems: 'center', justifyContent: 'flex-end', height: 50 }}>
-              {/* Align the icon */}
               <View style={{ height: 32, justifyContent: 'center' }}>
                 <IconComponent color={focused ? 'white' : 'white'} />
               </View>
-              {/* Align the label */}
-              <Text style={{ color: focused ? 'white' : 'white', fontSize: 12, marginTop: 0 }}>{label}</Text>
+              <Text style={{ color: focused ? 'white' : 'white', fontSize: 12, marginTop: 0 }}>
+                {label}
+              </Text>
             </View>
           );
         },
@@ -80,7 +81,7 @@ const HomeTabs = () => {
         tabBarStyle: {
           backgroundColor: '#000080',
           paddingVertical: 0,
-          height: Platform.OS === 'ios' ? 70 : 60, // Adjust height for platform differences
+          height: Platform.OS === 'ios' ? 70 : 60,
         },
       })}
     >
@@ -155,28 +156,48 @@ const App: React.FC = () => {
             component={SearchScreen}
             options={{
               title: 'Search Ingredients',
-              headerBackTitleVisible: false, // Hides the text next to the back arrow
+              headerBackTitleVisible: false,
+              headerBackTitle: 'Home',
             }}
           />
           <Stack.Screen
             name="CustomRatioScreen"
-            component={CustomRatioScreen}
-            options={{ 
-              title: 'Custom Ratio'
+            options={{ title: 'Custom Ratio' }}
+          >
+            {props => (
+              <SaveProvider>
+                <CustomRatioScreen {...props} />
+              </SaveProvider>
+            )}
+          </Stack.Screen>
+          <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+          <Stack.Screen
+            name="CalculatorScreen"
+            component={CalculatorScreen}
+            options={{
+              title: 'Calculator',
+              headerBackTitleVisible: false,
+              headerBackTitle: 'Home',
             }}
           />
-          <Stack.Screen name="CalculatorScreen" component={CalculatorScreen} />
-          <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
           <Stack.Screen name="SupportScreen" component={SupportScreen} />
-          <Stack.Screen 
-            name="FAQScreen" 
+          <Stack.Screen
+            name="FAQScreen"
             component={FAQScreen}
-            options={{ title: 'App FAQs' }} 
+            options={{
+              title: 'App FAQs',
+              headerBackTitleVisible: false,
+              headerBackTitle: 'Home',
+            }}
           />
-          <Stack.Screen 
-            name="RawFeedingFAQScreen" 
+          <Stack.Screen
+            name="RawFeedingFAQScreen"
             component={RawFeedingFAQScreen}
-            options={{title: 'Raw Feeding FAQs'}}
+            options={{
+              title: 'Raw Feeding FAQs',
+              headerBackTitleVisible: false,
+              headerBackTitle: 'Home',
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>

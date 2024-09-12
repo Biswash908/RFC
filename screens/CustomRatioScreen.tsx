@@ -1,22 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CustomRatioScreen: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<{ params: { onSave: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => void } }, 'params'>>();
+  const route = useRoute<RouteProp<{ params: { onSave?: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => void } }, 'params'>>();
+  
+  const [onSave, setOnSave] = useState<(meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => void>(() => () => {});
 
-  // State for ratios
+  useEffect(() => {
+    const onSaveFromParams = route.params?.onSave;
+    if (onSaveFromParams) {
+      setOnSave(() => onSaveFromParams);
+    }
+  }, [route.params]);
+
   const [includePlantMatter, setIncludePlantMatter] = useState(false);
   const [meatRatio, setMeatRatio] = useState<number>(0);
   const [boneRatio, setBoneRatio] = useState<number>(0);
   const [organRatio, setOrganRatio] = useState<number>(0);
   const [plantMatterRatio, setPlantMatterRatio] = useState<number>(0);
-  
   const [buttonText, setButtonText] = useState('Use Ratio');
 
-  // Load saved custom ratio from AsyncStorage when the component mounts
   useEffect(() => {
     const loadSavedRatios = async () => {
       try {
@@ -25,7 +31,6 @@ const CustomRatioScreen: React.FC = () => {
         const savedBoneRatio = await AsyncStorage.getItem('boneRatio');
         const savedOrganRatio = await AsyncStorage.getItem('organRatio');
         const savedPlantMatterRatio = await AsyncStorage.getItem('plantMatterRatio');
-  
         setIncludePlantMatter(savedIncludePlantMatter === 'true');
         setMeatRatio(savedMeatRatio ? parseFloat(savedMeatRatio) : 0);
         setBoneRatio(savedBoneRatio ? parseFloat(savedBoneRatio) : 0);
@@ -35,11 +40,9 @@ const CustomRatioScreen: React.FC = () => {
         console.log('Failed to load saved ratios:', error);
       }
     };
-  
     loadSavedRatios();
   }, []);
 
-  // Function to calculate the total ratio
   const calculateTotalRatio = () => {
     return includePlantMatter
       ? meatRatio + boneRatio + organRatio + plantMatterRatio
@@ -61,11 +64,9 @@ const CustomRatioScreen: React.FC = () => {
     }
   };
 
-  // Validate ratios and handle adding ratio
   const handleAddRatio = async () => {
     const totalRatio = calculateTotalRatio();
     const difference = totalRatio - 100;
-
     if (difference !== 0) {
       Alert.alert(
         'Error',
@@ -75,27 +76,30 @@ const CustomRatioScreen: React.FC = () => {
       );
       return;
     }
-
+    
     try {
       await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
       await AsyncStorage.setItem('meatRatio', meatRatio.toString());
       await AsyncStorage.setItem('boneRatio', boneRatio.toString());
       await AsyncStorage.setItem('organRatio', organRatio.toString());
       await AsyncStorage.setItem('plantMatterRatio', plantMatterRatio.toString());
-
       const ratioString = includePlantMatter
         ? `${meatRatio}:${boneRatio}:${organRatio}:${plantMatterRatio}`
         : `${meatRatio}:${boneRatio}:${organRatio}`;
-
       setButtonText(ratioString);
-
-      route.params.onSave(
-        meatRatio,
-        boneRatio,
-        organRatio,
-        includePlantMatter ? plantMatterRatio : 0,
-        includePlantMatter
-      );
+      
+      if (onSave) {
+        onSave(
+          meatRatio,
+          boneRatio,
+          organRatio,
+          includePlantMatter ? plantMatterRatio : 0,
+          includePlantMatter
+        );
+      } else {
+        console.warn('onSave function is not provided');
+      }
+  
       navigation.goBack();
     } catch (error) {
       console.log('Failed to save ratios:', error);
@@ -112,7 +116,6 @@ const CustomRatioScreen: React.FC = () => {
           const savedBoneRatio = await AsyncStorage.getItem('boneRatio');
           const savedOrganRatio = await AsyncStorage.getItem('organRatio');
           const savedPlantMatterRatio = await AsyncStorage.getItem('plantMatterRatio');
-
           setIncludePlantMatter(savedIncludePlantMatter === 'true');
           setMeatRatio(savedMeatRatio ? parseFloat(savedMeatRatio) : 0);
           setBoneRatio(savedBoneRatio ? parseFloat(savedBoneRatio) : 0);
@@ -122,16 +125,14 @@ const CustomRatioScreen: React.FC = () => {
           console.log('Failed to load saved ratios:', error);
         }
       };
-
       loadSavedRatios();
     }, [])
   );
 
   const handleInputChange = (value: string, setState: React.Dispatch<React.SetStateAction<number>>) => {
-    // Allow decimal input and sanitize the input
     const sanitizedValue = parseFloat(value.replace(/[^0-9.]/g, ''));
     if (isNaN(sanitizedValue)) {
-      setState(0);  // Set to zero if input is invalid
+      setState(0);
     } else {
       setState(sanitizedValue);
     }
@@ -142,8 +143,6 @@ const CustomRatioScreen: React.FC = () => {
       <View style={styles.customRatioTitle}>
         <Text style={styles.customRatioTitle}>Select your Custom ratio:</Text>
       </View>
-
-      {/* Plant Matter Toggle */}
       <View style={styles.toggleContainer}>
         <Text style={styles.toggleLabel}>Include Plant Matter</Text>
         <Switch
@@ -151,10 +150,7 @@ const CustomRatioScreen: React.FC = () => {
           onValueChange={handleTogglePlantMatter}
         />
       </View>
-
-      {/* Ratio Input Boxes in a 2x2 Layout */}
       <View style={styles.ratioInputContainer}>
-        {/* Row 1: Meat and Bone Ratios */}
         <View style={styles.inputRow}>
           <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>Meat Ratio</Text>
@@ -175,8 +171,6 @@ const CustomRatioScreen: React.FC = () => {
             />
           </View>
         </View>
-
-        {/* Row 2: Organ Ratio and Plant Matter Ratio (if included) */}
         <View style={styles.inputRow}>
           <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>Organ Ratio</Text>
@@ -200,8 +194,6 @@ const CustomRatioScreen: React.FC = () => {
           )}
         </View>
       </View>
-
-      {/* Add Ratio Button */}
       <TouchableOpacity style={styles.addButton} onPress={handleAddRatio}>
         <Text style={styles.addButtonText}>{buttonText}</Text>
       </TouchableOpacity>
