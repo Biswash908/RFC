@@ -2,20 +2,23 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSaveContext } from '../SaveContext';
+
+type RootStackParamList = {
+  FoodInputScreen: undefined;
+  FoodInfoScreen: { ingredient: Ingredient; editMode: boolean };
+  SearchScreen: undefined;
+  CalculatorScreen: { meat: number; bone: number; organ: number; plantmatter: number };
+  CustomRatioScreen: { onSave?: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => void };
+};
+
+type CustomRatioScreenRouteProp = RouteProp<RootStackParamList, 'CustomRatioScreen'>;
 
 const CustomRatioScreen: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<{ params: { onSave?: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => void } }, 'params'>>();
+  const route = useRoute<CustomRatioScreenRouteProp>();
+  const { saveCustomRatios } = useSaveContext(); 
   
-  const [onSave, setOnSave] = useState<(meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => void>(() => () => {});
-
-  useEffect(() => {
-    const onSaveFromParams = route.params?.onSave;
-    if (onSaveFromParams) {
-      setOnSave(() => onSaveFromParams);
-    }
-  }, [route.params]);
-
   const [includePlantMatter, setIncludePlantMatter] = useState(false);
   const [meatRatio, setMeatRatio] = useState<number>(0);
   const [boneRatio, setBoneRatio] = useState<number>(0);
@@ -31,6 +34,7 @@ const CustomRatioScreen: React.FC = () => {
         const savedBoneRatio = await AsyncStorage.getItem('boneRatio');
         const savedOrganRatio = await AsyncStorage.getItem('organRatio');
         const savedPlantMatterRatio = await AsyncStorage.getItem('plantMatterRatio');
+
         setIncludePlantMatter(savedIncludePlantMatter === 'true');
         setMeatRatio(savedMeatRatio ? parseFloat(savedMeatRatio) : 0);
         setBoneRatio(savedBoneRatio ? parseFloat(savedBoneRatio) : 0);
@@ -76,6 +80,11 @@ const CustomRatioScreen: React.FC = () => {
       );
       return;
     }
+  
+    const saveCustomRatioAndGoBack = (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => {
+      saveCustomRatios({ meat, bone, organ, plantMatter, includePlantMatter });
+      navigation.goBack();
+    };
     
     try {
       await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
@@ -83,24 +92,17 @@ const CustomRatioScreen: React.FC = () => {
       await AsyncStorage.setItem('boneRatio', boneRatio.toString());
       await AsyncStorage.setItem('organRatio', organRatio.toString());
       await AsyncStorage.setItem('plantMatterRatio', plantMatterRatio.toString());
+  
       const ratioString = includePlantMatter
         ? `${meatRatio}:${boneRatio}:${organRatio}:${plantMatterRatio}`
         : `${meatRatio}:${boneRatio}:${organRatio}`;
       setButtonText(ratioString);
-      
-      if (onSave) {
-        onSave(
-          meatRatio,
-          boneRatio,
-          organRatio,
-          includePlantMatter ? plantMatterRatio : 0,
-          includePlantMatter
-        );
-      } else {
-        console.warn('onSave function is not provided');
-      }
   
-      navigation.goBack();
+      // Call onSave callback to pass the new ratios back to CalculatorScreen
+      route.params?.onSave?.(meatRatio, boneRatio, organRatio, plantMatterRatio, includePlantMatter);
+      
+      saveCustomRatioAndGoBack(meatRatio, boneRatio, organRatio, plantMatterRatio, includePlantMatter);
+  
     } catch (error) {
       console.log('Failed to save ratios:', error);
       Alert.alert('Error', 'Failed to save the ratio. Please try again.');

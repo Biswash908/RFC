@@ -13,8 +13,8 @@ import FAQScreen from './screens/FAQScreen';
 import CustomRatioScreen from './screens/CustomRatioScreen';
 import RawFeedingFAQScreen from './screens/RawFeedingFAQScreen';
 import { UnitProvider } from './UnitContext';
-import { SaveProvider } from './SaveProvider'; // Corrected path to SaveProvider
-import Svg, { Path } from 'react-native-svg'; // Import for custom icons
+import { SaveProvider } from './SaveContext';
+import Svg, { Path } from 'react-native-svg';
 
 export type RootStackParamList = {
   FoodInputScreen: undefined;
@@ -139,68 +139,68 @@ const HomeTabs = () => {
 const App: React.FC = () => {
   return (
     <UnitProvider>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="HomeTabs">
-          <Stack.Screen
-            name="HomeTabs"
-            component={HomeTabs}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="FoodInfoScreen"
-            component={FoodInfoScreen}
-            options={{ title: 'Food Information' }}
-          />
-          <Stack.Screen
-            name="SearchScreen"
-            component={SearchScreen}
-            options={{
-              title: 'Search Ingredients',
-              headerBackTitleVisible: false,
-              headerBackTitle: 'Home',
-            }}
-          />
-          <Stack.Screen
-            name="CustomRatioScreen"
-            options={{ title: 'Custom Ratio' }}
-          >
-            {props => (
-              <SaveProvider>
+      <SaveProvider>
+        <NavigationContainer>
+          <Stack.Navigator initialRouteName="HomeTabs">
+            <Stack.Screen
+              name="HomeTabs"
+              component={HomeTabs}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="FoodInfoScreen"
+              component={FoodInfoScreen}
+              options={{ title: 'Food Information' }}
+            />
+            <Stack.Screen
+              name="SearchScreen"
+              component={SearchScreen}
+              options={{
+                title: 'Search Ingredients',
+                headerBackTitleVisible: false,
+                headerBackTitle: 'Home',
+              }}
+            />
+            <Stack.Screen
+              name="CustomRatioScreen"
+              options={{ title: 'Custom Ratio' }}
+            >
+              {props => (
                 <CustomRatioScreen {...props} />
-              </SaveProvider>
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
-          <Stack.Screen
-            name="CalculatorScreen"
-            component={CalculatorScreen}
-            options={{
-              title: 'Calculator',
-              headerBackTitleVisible: false,
-              headerBackTitle: 'Home',
-            }}
-          />
-          <Stack.Screen name="SupportScreen" component={SupportScreen} />
-          <Stack.Screen
-            name="FAQScreen"
-            component={FAQScreen}
-            options={{
-              title: 'App FAQs',
-              headerBackTitleVisible: false,
-              headerBackTitle: 'Home',
-            }}
-          />
-          <Stack.Screen
-            name="RawFeedingFAQScreen"
-            component={RawFeedingFAQScreen}
-            options={{
-              title: 'Raw Feeding FAQs',
-              headerBackTitleVisible: false,
-              headerBackTitle: 'Home',
-            }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+            <Stack.Screen
+              name="CalculatorScreen"
+              component={CalculatorScreen}
+              options={{
+                title: 'Calculator',
+                headerBackTitleVisible: false,
+                headerBackTitle: 'Home',
+              }}
+            />
+            <Stack.Screen name="SupportScreen" component={SupportScreen} />
+            <Stack.Screen
+              name="FAQScreen"
+              component={FAQScreen}
+              options={{
+                title: 'App FAQs',
+                headerBackTitleVisible: false,
+                headerBackTitle: 'Home',
+              }}
+            />
+            <Stack.Screen
+              name="RawFeedingFAQScreen"
+              component={RawFeedingFAQScreen}
+              options={{
+                title: 'Raw Feeding FAQs',
+                headerBackTitleVisible: false,
+                headerBackTitle: 'Home',
+              }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SaveProvider>
     </UnitProvider>
   );
 };
