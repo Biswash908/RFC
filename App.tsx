@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, Platform } from 'react-native';
+import FontAwesome6 from 'react-native-vector-icons/FontAwesome6'; // Import FontAwesome6 for icons
 import FoodInputScreen from './screens/FoodInputScreen';
 import FoodInfoScreen from './screens/FoodInfoScreen';
 import SearchScreen from './screens/SearchScreen';
@@ -12,10 +13,12 @@ import SupportScreen from './screens/SupportScreen';
 import FAQScreen from './screens/FAQScreen';
 import CustomRatioScreen from './screens/CustomRatioScreen';
 import RawFeedingFAQScreen from './screens/RawFeedingFAQScreen';
+import InfoAndSupportScreen from './screens/InfoAndSupportScreen';
+import RecipeScreen from './screens/RecipeScreen';
 import { UnitProvider } from './UnitContext';
 import { SaveProvider } from './SaveContext';
-import Svg, { Path } from 'react-native-svg';
 
+// Define the stack's parameter list
 export type RootStackParamList = {
   FoodInputScreen: undefined;
   FoodInfoScreen: { ingredient: Ingredient; editMode: boolean };
@@ -27,69 +30,51 @@ export type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
-// Custom SVG Icon Components
-const HomeIcon = ({ color }) => (
-  <Svg width="35" height="42" viewBox="0 0 24 23.5" fill={color}>
-    <Path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-  </Svg>
-);
-
-const SettingsIcon = ({ color }) => (
-  <Svg width="32" height="30" viewBox="0 0 24 24" fill={color}>
-    <Path d="M19.14,12.94a7,7,0,0,0,.14-1,7,7,0,0,0-.14-1l2.11-1.65a.5.5,0,0,0,.12-.61l-2-3.46a.5.5,0,0,0-.6-.23l-2.49,1a6.84,6.84,0,0,0-1.7-1l-.38-2.65A.5.5,0,0,0,14,2H10a.5.5,0,0,0-.49.42L9.14,5.06a6.84,6.84,0,0,0-1.7,1l-2.49-1a.5.5,0,0,0-.6.23l-2,3.46a.5.5,0,0,0,.12.61L4.86,11a7,7,0,0,0-.14,1,7,7,0,0,0,.14,1l-2.11,1.65a.5.5,0,0,0-.12.61l2,3.46a.5.5,0,0,0,.6.23l2.49-1a6.84,6.84,0,0,0,1.7,1l.38,2.65A.5.5,0,0,0,10,22h4a.5.5,0,0,0,.49-.42l.38-2.65a6.84,6.84,0,0,0,1.7-1l2.49,1a.5.5,0,0,0,.6-.23l2-3.46a.5.5,0,0,0-.12-.61ZM12,15.5A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z" />
-  </Svg>
-);
-
-const SupportIcon = ({ color }) => (
-  <Svg width="32" height="29" viewBox="0 0 24 22" fill={color}>
-    <Path d="M12 2C6.48 2 2 6.48 2 12v5c0 1.65 1.35 3 3 3h1c1.1 0 2-.9 2-2v-3c0-1.1-.9-2-2-2H5v-1c0-3.87 3.13-7 7-7s7 3.13 7 7v1h-1c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h1c1.65 0 3-1.35 3-3v-5c0-5.52-4.48-10-10-10z" />
-  </Svg>
-);
-
 const HomeTabs = () => {
   return (
     <Tab.Navigator
       initialRouteName="HomeTabsHome"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused }) => {
-          let IconComponent;
+          let iconName;
           let label;
 
           if (route.name === 'HomeTabsHome') {
-            IconComponent = HomeIcon;
+            iconName = 'house'; // FontAwesome6 icon for Home
             label = 'Home';
-          } else if (route.name === 'Settings') {
-            IconComponent = SettingsIcon;
-            label = 'Settings';
-          } else if (route.name === 'Support') {
-            IconComponent = SupportIcon;
+          } else if (route.name === 'Recipe') {
+            iconName = 'book'; // FontAwesome6 icon for Recipes
+            label = 'Recipes';
+          } else if (route.name === 'InfoAndSupport') {
+            iconName = 'gear'; // FontAwesome6 icon for Support
             label = 'Support';
           }
 
           return (
-            <View style={{ alignItems: 'center', justifyContent: 'flex-end', height: 50 }}>
-              <View style={{ height: 32, justifyContent: 'center' }}>
-                <IconComponent color={focused ? 'white' : 'white'} />
-              </View>
-              <Text style={{ color: focused ? 'white' : 'white', fontSize: 12, marginTop: 0 }}>
-                {label}
-              </Text>
+            <View style={{ alignItems: 'center', justifyContent: 'center', height: 50 }}>
+              <FontAwesome6
+                name={iconName}
+                size={28}
+                color="white"
+                style={{ textAlign: 'center' }}
+              />
+              <Text style={{ color: 'white', fontSize: 12 }}>{label}</Text>
             </View>
           );
         },
         tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: '#000080',
-          paddingVertical: 0,
+          paddingVertical: 5,
           height: Platform.OS === 'ios' ? 70 : 60,
         },
       })}
     >
       <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
+        name="InfoAndSupport"
+        component={InfoAndSupportScreen}
         options={{
-          title: 'Settings',
+          title: 'Support',
           headerTitleAlign: 'center',
           headerStyle: {
             backgroundColor: 'white',
@@ -114,13 +99,14 @@ const HomeTabs = () => {
             fontWeight: 'bold',
             color: 'white',
           },
+          headerShown: false, // Optional: to hide the top header for the Home screen
         }}
       />
       <Tab.Screen
-        name="Support"
-        component={SupportScreen}
+        name="Recipe"
+        component={RecipeScreen}
         options={{
-          title: 'Support',
+          title: 'Recipes',
           headerTitleAlign: 'center',
           headerStyle: {
             backgroundColor: 'white',
@@ -165,9 +151,7 @@ const App: React.FC = () => {
               name="CustomRatioScreen"
               options={{ title: 'Custom Ratio' }}
             >
-              {props => (
-                <CustomRatioScreen {...props} />
-              )}
+              {props => <CustomRatioScreen {...props} />}
             </Stack.Screen>
             <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
             <Stack.Screen

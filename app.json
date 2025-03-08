@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "BatchPlanner",
-    "slug": "BatchPlanner",
-    "version": "1.0.0",
+    "name": "Raw Feeding Calc for Dogs",
+    "slug": "make-things-unlimited-dog-calc",
+    "version": "1.0.2",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/iconD.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splashD.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -21,13 +21,20 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.MakeThingsUnlimited.DogCalc",
+      "versionCode": 3,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-iconD.png",
         "backgroundColor": "#FFFFFF"
       }
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d7f4197f-2487-43be-b10b-95974d5ae27a"
+      }
     }
   }
 }

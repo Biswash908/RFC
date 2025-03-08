@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Aler
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSaveContext } from '../SaveContext';  // Only import useSaveContext here
 import { useUnit } from '../UnitContext';
 
 type RootStackParamList = {
@@ -18,11 +17,18 @@ type CalculatorScreenRouteProp = RouteProp<RootStackParamList, 'CalculatorScreen
 
 const CalculatorScreen: React.FC = () => {
   const route = useRoute<CalculatorScreenRouteProp>();
-  const { customRatios, saveCustomRatios } = useSaveContext();  // Correct usage of useSaveContext
   const navigation = useNavigation();
 
   const navigateToCustomRatio = () => {
-    navigation.navigate('CustomRatioScreen');
+    navigation.navigate('CustomRatioScreen', {
+      onSave: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => {
+        setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter });
+        setSelectedRatio('custom');
+        
+        // Update the correctors immediately after setting custom ratio
+        setRatio(meat, bone, organ, plantMatter, 'custom');
+      },
+    });
   };
 
   const [newPlantMatter, setNewPlantMatter] = useState<number>(10); // Default to 10, similar to others
@@ -108,19 +114,6 @@ const CalculatorScreen: React.FC = () => {
 
       loadRatios();
     }, [route.params])
-  );
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (customRatios) {
-        setNewMeat(customRatios.meat);
-        setNewBone(customRatios.bone);
-        setNewOrgan(customRatios.organ);
-        setNewPlantMatter(customRatios.plantMatter);
-        setIncludePlantMatter(customRatios.includePlantMatter);
-        setSelectedRatio('custom');
-      }
-    }, [customRatios])
   );
 
   useEffect(() => {
@@ -281,11 +274,6 @@ const CalculatorScreen: React.FC = () => {
     return `${action} ${formattedValue} ${unit} of ${ingredient}`;
   };
 
-  const displayCustomRatio = customRatios.includePlantMatter
-    ? `${customRatios.meat}:${customRatios.bone}:${customRatios.organ}:${customRatios.plantMatter}`
-    : `${customRatios.meat}:${customRatios.bone}:${customRatios.organ}`;
-
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
@@ -359,13 +347,15 @@ const CalculatorScreen: React.FC = () => {
               styles.customButton,
               selectedRatio === 'custom' ? styles.selectedCustomButton : { backgroundColor: 'white', borderColor: 'navy' },
             ]}
-            onPress={navigateToCustomRatio}
+            onPress={navigateToCustomRatio} // Correct navigation action
           >
             <Text style={[
               styles.customButtonText,
               selectedRatio === 'custom' ? { color: 'white' } : { color: 'black' }
             ]}>
-              {selectedRatio === 'custom' ? displayCustomRatio : "Custom Ratio"}
+              {selectedRatio === 'custom'
+                ? `${customRatio.meat}:${customRatio.bone}:${customRatio.organ}${includePlantMatter ? `:${customRatio.plantMatter}` : ''}` 
+                : "Custom Ratio"}
             </Text>
           </TouchableOpacity>
 

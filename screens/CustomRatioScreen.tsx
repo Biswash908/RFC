@@ -81,11 +81,10 @@ const CustomRatioScreen: React.FC = () => {
       return;
     }
   
-    const saveCustomRatioAndGoBack = (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => {
-      saveCustomRatios({ meat, bone, organ, plantMatter, includePlantMatter });
-      navigation.goBack();
-    };
-    
+    console.log("🚀 Sending custom ratio from CRS to CS:", {
+      meatRatio, boneRatio, organRatio, plantMatterRatio, includePlantMatter
+    });
+  
     try {
       await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
       await AsyncStorage.setItem('meatRatio', meatRatio.toString());
@@ -100,14 +99,17 @@ const CustomRatioScreen: React.FC = () => {
   
       // Call onSave callback to pass the new ratios back to CalculatorScreen
       route.params?.onSave?.(meatRatio, boneRatio, organRatio, plantMatterRatio, includePlantMatter);
-      
-      saveCustomRatioAndGoBack(meatRatio, boneRatio, organRatio, plantMatterRatio, includePlantMatter);
   
+      console.log("✅ Custom Ratio sent to CS via onSave!");
+  
+      saveCustomRatios({ meat: meatRatio, bone: boneRatio, organ: organRatio, plantMatter: plantMatterRatio, includePlantMatter });
+  
+      navigation.goBack();
     } catch (error) {
-      console.log('Failed to save ratios:', error);
+      console.log('❌ Failed to save ratios:', error);
       Alert.alert('Error', 'Failed to save the ratio. Please try again.');
     }
-  };
+  };  
 
   useFocusEffect(
     React.useCallback(() => {

@@ -1,28 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, TextInput, SafeAreaView, Modal, StatusBar } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useUnit } from '../UnitContext';
+import { v4 as uuidv4 } from 'uuid';
 
 export type Ingredient = {
   name: string;
   meatWeight: number;
   boneWeight: number;
   organWeight: number;
-  plantMatterWeight?: number;  // Combined weight for vegetable, fruit, and nuts
+  plantMatterWeight?: number;
   totalWeight: number;
   unit: 'g' | 'kg' | 'lbs';
-  type?: 'Fruit' | 'Vegetable' | 'Nut & Seed'; // Type for non-meat ingredients
+  type?: 'Fruit' | 'Vegetable' | 'Nut & Seed';
 };
 
 export type RootStackParamList = {
-  FoodInputScreen: undefined;
+  FoodInputScreen: { 
+    recipeId: string; 
+    recipeName: string; 
+    ingredients: Ingredient[]; 
+  };
   FoodInfoScreen: { ingredient: Ingredient; editMode: boolean };
   SearchScreen: undefined;
   CalculatorScreen: { meat: number; bone: number; organ: number };
 };
 
-type FoodInputScreenRouteProp = RouteProp<RootStackParamList, 'FoodInfoScreen'>;
+type FoodInputScreenRouteProp = RouteProp<RootStackParamList, 'FoodInputScreen'>;
 
 const FoodInputScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -36,6 +43,11 @@ const FoodInputScreen: React.FC = () => {
   const [totalPlantMatter, setTotalPlantMatter] = useState(0);
   const [totalWeight, setTotalWeight] = useState(0);
 
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [recipeName, setRecipeName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  
+
   useEffect(() => {
     const newIngredient = route.params?.updatedIngredient;
     if (newIngredient) {
@@ -45,7 +57,7 @@ const FoodInputScreen: React.FC = () => {
       newIngredient.meatWeight = newIngredient.meatWeight ?? 0;
       newIngredient.boneWeight = newIngredient.boneWeight ?? 0;
       newIngredient.organWeight = newIngredient.organWeight ?? 0;
-      newIngredient.plantMatterWeight = newIngredient.plantMatterWeight ?? 0;  // Ensure plantMatterWeight is defined
+      newIngredient.plantMatterWeight = newIngredient.plantMatterWeight ?? 0;
   
       const existingIngredientIndex = ingredients.findIndex(ing => ing.name === newIngredient.name);
       let updatedIngredients;
@@ -56,6 +68,35 @@ const FoodInputScreen: React.FC = () => {
       } else {
         updatedIngredients = [...ingredients, newIngredient];
       }
+  
+      setIngredients(updatedIngredients);
+      calculateTotals(updatedIngredients);
+    }
+  }, [route.params?.updatedIngredient]);
+
+  useEffect(() => {
+    if (route.params?.ratio) {
+      const { meat, bone, organ } = route.params.ratio;
+      setMeatRatio(meat);
+      setBoneRatio(bone);
+      setOrganRatio(organ);
+      console.log("Received ratio parameters:", { meat, bone, organ }); // Add this log statement
+    }
+  }, [route.params]);
+  
+  useEffect(() => {
+    const newIngredient = route.params?.updatedIngredient;
+    if (newIngredient && newIngredient.name) {
+      newIngredient.unit = newIngredient.unit || globalUnit;
+      newIngredient.meatWeight = newIngredient.meatWeight ?? 0;
+      newIngredient.boneWeight = newIngredient.boneWeight ?? 0;
+      newIngredient.organWeight = newIngredient.organWeight ?? 0;
+      newIngredient.plantMatterWeight = newIngredient.plantMatterWeight ?? 0;
+  
+      const existingIngredientIndex = ingredients.findIndex(ing => ing.name === newIngredient.name);
+      const updatedIngredients = existingIngredientIndex !== -1
+        ? ingredients.map((ing, index) => (index === existingIngredientIndex ? newIngredient : ing))
+        : [...ingredients, newIngredient];
   
       setIngredients(updatedIngredients);
       calculateTotals(updatedIngredients);
@@ -114,8 +155,101 @@ const FoodInputScreen: React.FC = () => {
     setTotalPlantMatter(plantMatterWeight);
   };
   
+  const handleSaveRecipe = async () => {
+    if (!recipeName.trim()) {
+      setIsModalVisible(true); // Show modal to add recipe name
+      return;
+    }
   
+    if (ingredients.length === 0) {
+      Alert.alert('Error', "Ingredients can't be empty.");
+      return;
+    }
   
+    setIsSaving(true); // Start loading indicator
+    try {
+      // Fetch existing recipes
+      const storedRecipes = await AsyncStorage.getItem('recipes');
+      const parsedRecipes = storedRecipes ? JSON.parse(storedRecipes) : [];
+  
+      // Function to generate a unique recipe name if duplicates exist
+      const generateUniqueRecipeName = (name: string, existingRecipes: any[]) => {
+        let newName = name;
+        let counter = 1;
+  
+        while (existingRecipes.some((r: any) => r.name.toLowerCase() === newName.toLowerCase())) {
+          newName = `${name} (${counter})`;
+          counter++;
+        }
+  
+        return newName;
+      };
+  
+      // Generate a unique recipe name
+      const uniqueRecipeName = generateUniqueRecipeName(recipeName.trim(), parsedRecipes);
+  
+      // Prepare the new recipe object with complete ingredient data
+      const newRecipe = {
+        id: uuidv4(),
+        name: uniqueRecipeName,
+        totalMeat,
+        totalBone,
+        totalOrgan,
+        totalPlantMatter,
+        totalWeight,
+        ingredients: ingredients.map(ing => ({
+          name: ing.name,
+          meatWeight: ing.meatWeight,
+          boneWeight: ing.boneWeight,
+          organWeight: ing.organWeight,
+          plantMatterWeight: ing.plantMatterWeight || 0,
+          totalWeight: ing.totalWeight,
+          unit: ing.unit,
+          type: ing.type || null, // Add type (Fruit, Vegetable, Nut & Seed)
+        })),
+      };
+  
+      // Update recipes and save to AsyncStorage
+      const updatedRecipes = [...parsedRecipes, newRecipe];
+      await AsyncStorage.setItem('recipes', JSON.stringify(updatedRecipes));
+  
+      Alert.alert('Success', `Recipe saved successfully as "${uniqueRecipeName}"!`);
+      setIsModalVisible(false); // Close modal
+      setRecipeName(''); // Reset recipe name
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save the recipe.');
+      console.error('Failed to save recipe', error);
+    } finally {
+      setIsSaving(false); // Stop loading indicator
+    }
+  };  
+
+  useEffect(() => {
+    if (route.params) {
+      const { recipeId, recipeName, ingredients } = route.params;
+      console.log('Received recipeId:', recipeId);
+      console.log('Received recipeName:', recipeName);
+      console.log('Received ingredients:', ingredients);
+  
+      if (ingredients) {
+        const updatedIngredients = ingredients.map((ing) => ({
+          ...ing,
+          unit: ing.unit || globalUnit,
+          meatWeight: ing.meatWeight ?? 0,
+          boneWeight: ing.boneWeight ?? 0,
+          organWeight: ing.organWeight ?? 0,
+          plantMatterWeight: ing.plantMatterWeight ?? 0,
+          totalWeight: ing.totalWeight ?? 0,
+        }));
+        setIngredients(updatedIngredients);
+        calculateTotals(updatedIngredients);
+      }
+  
+      if (recipeName) {
+        setRecipeName(recipeName);
+      }
+    }
+  }, [route.params]);  
 
   const handleDeleteIngredient = (name: string) => {
     Alert.alert(
@@ -132,6 +266,24 @@ const FoodInputScreen: React.FC = () => {
     );
   };
 
+  const handleClearScreen = () => {
+    Alert.alert(
+      'Clear Ingredients',
+      'Are you sure you want to clear all ingredients and the recipe name?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', onPress: () => {
+            setIngredients([]);
+            setRecipeName('');
+            setTotalMeat(0);
+            setTotalBone(0);
+            setTotalOrgan(0);
+            setTotalWeight(0);
+          }},
+      ]
+    );
+  };
+
   const formatWeight = (weight: number | undefined, weightUnit: 'g' | 'kg' | 'lbs') => {
     return (weight !== undefined && !isNaN(weight) ? weight.toFixed(2) : '0.00') + ' ' + weightUnit;
   };
@@ -140,6 +292,10 @@ const FoodInputScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
       <View style={styles.container}>
+
+      <View style={styles.topBar}>
+        <Text style={styles.topBarText}>{recipeName ? recipeName : 'Raw Feeding Calc'}</Text>
+      </View>
 
         <View style={styles.totalBar}>
           <Text style={styles.totalText}>
@@ -212,28 +368,76 @@ const FoodInputScreen: React.FC = () => {
     )}
   </ScrollView>
 
+  <Modal
+          transparent={true}
+          visible={isModalVisible}
+          onRequestClose={() => setIsModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Add Recipe</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Recipe Name"
+                value={recipeName}
+                onChangeText={setRecipeName}
+              />
+              <View style={styles.modalButtonsContainer}>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSaveRecipe}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setIsModalVisible(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
+        <TouchableOpacity
+          style={styles.clearButton}
+          onPress={handleClearScreen}>
+          <Text style={styles.clearButtonText}>Clear</Text>
+        </TouchableOpacity>
 
         <View style={styles.calculateButtonContainer}>
-          <TouchableOpacity
-            style={styles.ingredientButton}
-            onPress={() => navigation.navigate('SearchScreen')}>
-            <Text style={styles.ingredientButtonText}>Add Ingredients</Text>
-          </TouchableOpacity>
+        <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={styles.ingredientButton}
+          onPress={() => navigation.navigate('SearchScreen')}>
+          <Text style={styles.ingredientButtonText}>Add Ingredients</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.saveRecipeButton, isSaving && { backgroundColor: 'grey' }]}
+          onPress={handleSaveRecipe}
+          disabled={isSaving}>
+          {isSaving ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Recipe</Text>
+          )}
+        </TouchableOpacity>
+        </View>
           
-          <TouchableOpacity
-            style={styles.calculateButton}
-            onPress={() =>
-              navigation.navigate('CalculatorScreen', {
-                meat: totalMeat,
-                bone: totalBone,
-                organ: totalOrgan,
-                plantmatter: totalPlantMatter, // Include this line to pass plant matter
-              })
-            }
-          >
-            <Text style={styles.calculateButtonText}>Select Ratio & Calculate</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.calculateButton}
+          onPress={() =>
+            navigation.navigate('CalculatorScreen', {
+              meat: totalMeat,
+              bone: totalBone,
+              organ: totalOrgan,
+              plantmatter: totalPlantMatter,
+            })
+          }>
+          <Text style={styles.calculateButtonText}>Select Ratio & Calculate</Text>
+        </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -333,27 +537,70 @@ const styles = StyleSheet.create({
   deleteButton: {
     padding: 5,
   },
-  calculateButtonContainer: {
-    padding: 20,
-    borderTopWidth: 0.7,
-    borderTopColor: '#ded8d7',
-    backgroundColor: 'white',
-    paddingBottom: 10,
-  },
-  ingredientButton: {
-    backgroundColor: '#000080',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginBottom: 20,
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background to focus on the modal
   },
-  ingredientButtonText: {
-    fontSize: 18,
+  modalBox: {
+    width: '80%',
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5, // Shadow for Android
+  },
+  modalTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    marginBottom: 15,
+    textAlign: 'center',
   },
-  calculateButton: {
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    width: '100%',
+    paddingHorizontal: 10,
+    marginBottom: 20,
+    borderRadius: 5,
+  },
+  modalButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  saveButton: {
+    backgroundColor: '#000080',
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginRight: 5,
+  },
+  cancelButton: {
+    backgroundColor: 'grey',
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginLeft: 5,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  cancelButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  addNewRecipeButton: {
     backgroundColor: '#000080',
     paddingVertical: 10,
     paddingHorizontal: 10,
@@ -361,10 +608,87 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: 'center',
   },
-  calculateButtonText: {
+  addNewRecipeButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: 'white',
+  },
+  noIngredientsText: {
+    fontSize: 18,
+    color: 'gray',
+    textAlign: 'center',
+    marginTop: 50,
+  },
+  clearButton: {
+    position: 'absolute',
+    bottom: 150,
+    left: '50%',
+    transform: [{ translateX: -40 }],
+    backgroundColor: '#FF3D00', 
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  clearButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  calculateButtonContainer: {
+    padding: 15,
+    borderTopWidth: 0.7,
+    borderTopColor: '#ded8d7',
+    backgroundColor: 'white',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  ingredientButton: {
+    flex: 1,
+    backgroundColor: '#000080',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginRight: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveRecipeButton: {
+    flex: 1,
+    backgroundColor: '#000080',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginLeft: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ingredientButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  calculateButton: {
+    backgroundColor: '#000080',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calculateButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   bottomBar: {
     flexDirection: 'row',
