@@ -220,6 +220,34 @@ const CalculatorScreen: React.FC = () => {
     }
   }
 
+  const handleApplyRatio = () => {
+    // Ensure custom ratio is saved as numbers, not "custom"
+    const formattedRatio = selectedRatio === 'custom' 
+      ? `${newMeat}:${newBone}:${newOrgan}${newPlantMatter > 0 ? `:${newPlantMatter}` : ''}`
+      : selectedRatio;
+  
+    console.log("✅ Sending selected ratio to HomeTabsHome:", { 
+      meat: newMeat, 
+      bone: newBone, 
+      organ: newOrgan, 
+      plantMatter: newPlantMatter, 
+      selectedRatio: formattedRatio // ✅ Now it has actual numbers!
+    });
+  
+    navigation.navigate('HomeTabs', {
+      screen: 'HomeTabsHome',
+      params: {
+        ratio: {
+          meat: newMeat,
+          bone: newBone,
+          organ: newOrgan,
+          plantMatter: newPlantMatter,
+          selectedRatio: formattedRatio, // ✅ Now it's a proper ratio
+        },
+      },
+    });
+  };  
+
   const setRatio = (meat: number, bone: number, organ: number, plantMatter: number, ratio: string) => {
     setNewMeat(meat);
     setNewBone(bone);
@@ -358,6 +386,9 @@ const CalculatorScreen: React.FC = () => {
                 : "Custom Ratio"}
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.applyButton} onPress={handleApplyRatio}>
+            <Text style={styles.applyButtonText}>Apply Ratio</Text>
+          </TouchableOpacity>
 
           <View style={styles.correctorInfoContainer}>
             <Text style={styles.correctorInfoText}>Use the corrector to achieve the intended ratio:</Text>
@@ -485,6 +516,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'black',
   },
+  applyButton: {
+    backgroundColor: '#000080',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  applyButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },  
   correctorInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',

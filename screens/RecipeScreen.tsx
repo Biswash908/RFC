@@ -198,31 +198,31 @@ const RecipeScreen = ({ route }) => {
       'Load Recipe',
       `Do you want to load the recipe "${recipe.name}"?`,
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Yes',
           onPress: async () => {
             try {
-              // Save the selected recipe's ingredients, name, and id in AsyncStorage
               await AsyncStorage.setItem('selectedRecipe', JSON.stringify({
                 ingredients: recipe.ingredients,
                 recipeName: recipe.name,
                 recipeId: recipe.id,
+                selectedRatio: recipe.selectedRatio || '80:10:10', // ✅ Include ratio
               }));
   
-              console.log('Navigating to FoodInputScreen with recipeId:', recipe.id);
-              console.log('Navigating to FoodInputScreen with ingredients:', recipe.ingredients);
+              console.log('Navigating to FoodInputScreen with:', {
+                recipeId: recipe.id,
+                ingredients: recipe.ingredients,
+                selectedRatio: recipe.selectedRatio || '80:10:10',
+              });
   
-              // Navigate to FoodInputScreen within HomeTabs -> RecipeStack
               navigation.navigate('HomeTabs', {
                 screen: 'HomeTabsHome',
                 params: {
                   recipeName: recipe.name,
                   recipeId: recipe.id,
                   ingredients: recipe.ingredients,
+                  selectedRatio: recipe.selectedRatio || '80:10:10',
                 },
               });
             } catch (error) {
@@ -233,7 +233,7 @@ const RecipeScreen = ({ route }) => {
       ],
       { cancelable: true }
     );
-  };
+  };  
 
   const handleOpenEditModal = (recipe) => {
     setRecipeToEdit(recipe);
@@ -324,11 +324,10 @@ const RecipeScreen = ({ route }) => {
               <View style={styles.recipeInfo}>
                 <Text style={styles.recipeText}>{recipe.name}</Text>
                 <Text style={styles.ingredientCount}>
-                  {/* Display the ratio or fallback to '80:10:10' */}
-                  {recipe.ratio || '80:10:10'}
+                  {recipe.ratio && recipe.ratio.includes(':') 
+                    ? recipe.ratio // ✅ If it's a valid ratio, display it
+                    : '80:10:10'} 
                 </Text>
-              </View>
-              <View style={styles.iconsContainer}>
               </View>
               <View style={styles.iconsContainer}>
                 <TouchableOpacity style={styles.editButton} onPress={() => handleOpenEditModal(recipe)}>

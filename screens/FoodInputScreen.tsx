@@ -47,6 +47,16 @@ const FoodInputScreen: React.FC = () => {
   const [recipeName, setRecipeName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
+  const [newMeat, setNewMeat] = useState<number>(0);
+  const [newBone, setNewBone] = useState<number>(0);
+  const [newOrgan, setNewOrgan] = useState<number>(0);
+  const [newPlantMatter, setNewPlantMatter] = useState<number>(0); // For plant matter
+
+  const [meatRatio, setMeatRatio] = useState(0);
+  const [boneRatio, setBoneRatio] = useState(0);
+  const [organRatio, setOrganRatio] = useState(0);
+  const [plantMatterRatio, setPlantMatterRatio] = useState(0); // For plant matter
+  const [selectedRatio, setSelectedRatio] = useState<string>('80:10:10'); 
 
   useEffect(() => {
     const newIngredient = route.params?.updatedIngredient;
@@ -76,13 +86,22 @@ const FoodInputScreen: React.FC = () => {
 
   useEffect(() => {
     if (route.params?.ratio) {
-      const { meat, bone, organ } = route.params.ratio;
+      const { meat, bone, organ, plantMatter, selectedRatio } = route.params.ratio;
+  
+      console.log("📥 Received ratio in FoodInputScreen from CS:", { meat, bone, organ, plantMatter, selectedRatio });
+  
       setMeatRatio(meat);
       setBoneRatio(bone);
       setOrganRatio(organ);
-      console.log("Received ratio parameters:", { meat, bone, organ }); // Add this log statement
+      
+      // ✅ Only set plant matter if it exists (avoids potential errors)
+      if (plantMatter !== undefined) {
+        setPlantMatterRatio(plantMatter);
+      }
+  
+      setSelectedRatio(selectedRatio);
     }
-  }, [route.params]);
+  }, [route.params?.ratio]);  
   
   useEffect(() => {
     const newIngredient = route.params?.updatedIngredient;
@@ -157,7 +176,7 @@ const FoodInputScreen: React.FC = () => {
   
   const handleSaveRecipe = async () => {
     if (!recipeName.trim()) {
-      setIsModalVisible(true); // Show modal to add recipe name
+      setIsModalVisible(true);
       return;
     }
   
@@ -166,29 +185,25 @@ const FoodInputScreen: React.FC = () => {
       return;
     }
   
-    setIsSaving(true); // Start loading indicator
+    setIsSaving(true);
     try {
-      // Fetch existing recipes
       const storedRecipes = await AsyncStorage.getItem('recipes');
+console.log("🔍 Stored Recipes:", JSON.parse(storedRecipes));
       const parsedRecipes = storedRecipes ? JSON.parse(storedRecipes) : [];
   
-      // Function to generate a unique recipe name if duplicates exist
       const generateUniqueRecipeName = (name: string, existingRecipes: any[]) => {
         let newName = name;
         let counter = 1;
-  
         while (existingRecipes.some((r: any) => r.name.toLowerCase() === newName.toLowerCase())) {
           newName = `${name} (${counter})`;
           counter++;
         }
-  
         return newName;
       };
   
-      // Generate a unique recipe name
       const uniqueRecipeName = generateUniqueRecipeName(recipeName.trim(), parsedRecipes);
   
-      // Prepare the new recipe object with complete ingredient data
+      // Include the ratio when saving the recipe
       const newRecipe = {
         id: uuidv4(),
         name: uniqueRecipeName,
@@ -197,6 +212,9 @@ const FoodInputScreen: React.FC = () => {
         totalOrgan,
         totalPlantMatter,
         totalWeight,
+        ratio: selectedRatio === 'custom'
+          ? `${newMeat}:${newBone}:${newOrgan}${newPlantMatter > 0 ? `:${newPlantMatter}` : ''}`
+          : selectedRatio, // ✅ Save custom ratio as numbers, not "custom"
         ingredients: ingredients.map(ing => ({
           name: ing.name,
           meatWeight: ing.meatWeight,
@@ -205,22 +223,23 @@ const FoodInputScreen: React.FC = () => {
           plantMatterWeight: ing.plantMatterWeight || 0,
           totalWeight: ing.totalWeight,
           unit: ing.unit,
-          type: ing.type || null, // Add type (Fruit, Vegetable, Nut & Seed)
+          type: ing.type || null,
         })),
       };
+      
+      console.log("✅ Saving Recipe:", newRecipe); // Add this log          
   
-      // Update recipes and save to AsyncStorage
       const updatedRecipes = [...parsedRecipes, newRecipe];
       await AsyncStorage.setItem('recipes', JSON.stringify(updatedRecipes));
   
       Alert.alert('Success', `Recipe saved successfully as "${uniqueRecipeName}"!`);
-      setIsModalVisible(false); // Close modal
-      setRecipeName(''); // Reset recipe name
+      setIsModalVisible(false);
+      setRecipeName('');
     } catch (error) {
       Alert.alert('Error', 'Failed to save the recipe.');
       console.error('Failed to save recipe', error);
     } finally {
-      setIsSaving(false); // Stop loading indicator
+      setIsSaving(false);
     }
   };  
 
