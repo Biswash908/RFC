@@ -53,6 +53,22 @@ const CustomRatioScreen: React.FC = () => {
       : meatRatio + boneRatio + organRatio;
   };
 
+  // Add to the top of CustomRatioScreen.tsx
+useEffect(() => {
+  // Use values passed from CalculatorScreen if available
+  if (route.params?.currentValues) {
+    const { meat, bone, organ, plantMatter, includePlantMatter: includeP } = route.params.currentValues;
+    setMeatRatio(meat || 0);
+    setBoneRatio(bone || 0);
+    setOrganRatio(organ || 0);
+    setPlantMatterRatio(plantMatter || 0);
+    setIncludePlantMatter(includeP || false);
+  } else {
+    // Otherwise load from AsyncStorage
+    loadSavedRatios();
+  }
+}, [route.params?.currentValues]);
+
   const handleTogglePlantMatter = async (value: boolean) => {
     setIncludePlantMatter(value);
     if (!value) {
@@ -75,8 +91,8 @@ const CustomRatioScreen: React.FC = () => {
       Alert.alert(
         'Error',
         difference > 0
-          ? `You’re ${difference.toFixed(2)}% over the limit. Adjust the values so the total ratio equals 100%.`
-          : `You’re ${Math.abs(difference).toFixed(2)}% under 100%. Add more to make the ratio total 100%.`
+          ? `You're ${difference.toFixed(2)}% over the limit. Adjust the values so the total ratio equals 100%.`
+          : `You're ${Math.abs(difference).toFixed(2)}% under 100%. Add more to make the ratio total 100%.`
       );
       return;
     }
@@ -86,30 +102,21 @@ const CustomRatioScreen: React.FC = () => {
     });
   
     try {
-      await AsyncStorage.setItem('includePlantMatter', includePlantMatter.toString());
-      await AsyncStorage.setItem('meatRatio', meatRatio.toString());
-      await AsyncStorage.setItem('boneRatio', boneRatio.toString());
-      await AsyncStorage.setItem('organRatio', organRatio.toString());
-      await AsyncStorage.setItem('plantMatterRatio', plantMatterRatio.toString());
-  
-      const ratioString = includePlantMatter
-        ? `${meatRatio}:${boneRatio}:${organRatio}:${plantMatterRatio}`
-        : `${meatRatio}:${boneRatio}:${organRatio}`;
-      setButtonText(ratioString);
-  
       // Call onSave callback to pass the new ratios back to CalculatorScreen
-      route.params?.onSave?.(meatRatio, boneRatio, organRatio, plantMatterRatio, includePlantMatter);
+      if (route.params?.onSave) {
+        route.params.onSave(meatRatio, boneRatio, organRatio, plantMatterRatio, includePlantMatter);
+        console.log("✅ Custom Ratio sent to CS via onSave!");
+      } else {
+        console.log("❌ No onSave callback found!");
+      }
   
-      console.log("✅ Custom Ratio sent to CS via onSave!");
-  
-      saveCustomRatios({ meat: meatRatio, bone: boneRatio, organ: organRatio, plantMatter: plantMatterRatio, includePlantMatter });
-  
+      // Navigate back
       navigation.goBack();
     } catch (error) {
       console.log('❌ Failed to save ratios:', error);
       Alert.alert('Error', 'Failed to save the ratio. Please try again.');
     }
-  };  
+  };
 
   useFocusEffect(
     React.useCallback(() => {

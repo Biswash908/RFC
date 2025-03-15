@@ -19,18 +19,6 @@ const CalculatorScreen: React.FC = () => {
   const route = useRoute<CalculatorScreenRouteProp>();
   const navigation = useNavigation();
 
-  const navigateToCustomRatio = () => {
-    navigation.navigate('CustomRatioScreen', {
-      onSave: (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => {
-        setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter });
-        setSelectedRatio('custom');
-        
-        // Update the correctors immediately after setting custom ratio
-        setRatio(meat, bone, organ, plantMatter, 'custom');
-      },
-    });
-  };
-
   const [newPlantMatter, setNewPlantMatter] = useState<number>(10); // Default to 10, similar to others
   const [plantMatterCorrect, setPlantMatterCorrect] = useState<{ meat: number; bone: number; organ: number }>({ meat: 0, bone: 0, organ: 0 });
   const [includePlantMatter, setIncludePlantMatter] = useState<boolean>(false);
@@ -39,6 +27,8 @@ const CalculatorScreen: React.FC = () => {
   const initialBoneWeight = route.params?.bone ?? 0;
   const initialOrganWeight = route.params?.organ ?? 0;
   const initialPlantMatterWeight = route.params?.plantmatter ?? 0; // Initialize with route param
+  const initialSelectedRatio = route.params?.selectedRatio ?? '80:10:10'; // ✅ Read selectedRatio
+  const [userSelectedRatio, setUserSelectedRatio] = useState<boolean>(false);
 
   const { unit } = useUnit();
 
@@ -62,59 +52,156 @@ const CalculatorScreen: React.FC = () => {
     navigation.setOptions({ title: 'Calculator' });
   }, [navigation]);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const loadRatios = async () => {
+  const navigateToCustomRatio = () => {
+    navigation.navigate('CustomRatioScreen', {
+      onSave: async (meat: number, bone: number, organ: number, plantMatter: number, includePlantMatter: boolean) => {
+        console.log("📥 Received custom ratio from CustomRatioScreen:", { meat, bone, organ, plantMatter, includePlantMatter });
+        
         try {
-          const savedMeat = route.params?.meatRatio ?? (await AsyncStorage.getItem('meatRatio'));
-          const savedBone = route.params?.boneRatio ?? (await AsyncStorage.getItem('boneRatio'));
-          const savedOrgan = route.params?.organRatio ?? (await AsyncStorage.getItem('organRatio'));
-          const savedPlantMatter = route.params?.plantMatterRatio ?? (await AsyncStorage.getItem('plantMatterRatio'));
-          const savedRatio = await AsyncStorage.getItem('selectedRatio');
-          const savedIncludePlantMatter = await AsyncStorage.getItem('includePlantMatter');
-
-          if (savedRatio === 'custom') {
-            setCustomRatio({
-              meat: Number(savedMeat) || 0,
-              bone: Number(savedBone) || 0,
-              organ: Number(savedOrgan) || 0,
-              plantMatter: Number(savedPlantMatter) || 0,
-              includePlantMatter: savedIncludePlantMatter === 'true',
-            });
-            setSelectedRatio('custom');
-            setIncludePlantMatter(savedIncludePlantMatter === 'true');
-            setNewMeat(Number(savedMeat) || 0);
-            setNewBone(Number(savedBone) || 0);
-            setNewOrgan(Number(savedOrgan) || 0);
-            setNewPlantMatter(Number(savedPlantMatter) || 0);
-          } else if (savedRatio) {
-            setSelectedRatio(savedRatio);
-            setIncludePlantMatter(savedIncludePlantMatter === 'true');
-            setNewMeat(Number(savedMeat) || 0);
-            setNewBone(Number(savedBone) || 0);
-            setNewOrgan(Number(savedOrgan) || 0);
-            setNewPlantMatter(Number(savedPlantMatter) || 0);
-          } else {
-            setSelectedRatio('80:10:10');
-            setIncludePlantMatter(false);
-            setNewMeat(80);
-            setNewBone(10);
-            setNewOrgan(10);
-            setNewPlantMatter(0);
-          }
+          // Save to dedicated custom ratio keys
+          const keyValuePairs = [
+            ['selectedRatio', 'custom'],
+            ['customMeatRatio', meat.toString()],
+            ['customBoneRatio', bone.toString()],
+            ['customOrganRatio', organ.toString()],
+            ['customPlantMatterRatio', plantMatter.toString()],
+            ['includePlantMatter', includePlantMatter.toString()],
+            // Also save to regular keys for compatibility
+            ['meatRatio', meat.toString()],
+            ['boneRatio', bone.toString()],
+            ['organRatio', organ.toString()],
+            ['plantMatterRatio', plantMatter.toString()]
+          ];
+          
+          await AsyncStorage.multiSet(keyValuePairs);
+          console.log("✅ Custom ratio saved to AsyncStorage");
+          
+          // Update state
+          setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter });
+          setNewMeat(meat);
+          setNewBone(bone);
+          setNewOrgan(organ);
+          setNewPlantMatter(plantMatter);
+          setIncludePlantMatter(includePlantMatter);
+          setSelectedRatio('custom');
+          setUserSelectedRatio(true);
+          
+          // Update correctors
+          calculateCorrectors(
+            initialMeatWeight,
+            initialBoneWeight,
+            initialOrganWeight,
+            includePlantMatter ? initialPlantMatterWeight : 0,
+            meat,
+            bone,
+            organ,
+            plantMatter,
+            includePlantMatter
+          );
         } catch (error) {
-          console.log('Failed to load ratios:', error);
+          console.error("❌ Failed to save custom ratio:", error);
+        }
+      },
+      currentValues: {
+        meat: customRatio.meat || newMeat,
+        bone: customRatio.bone || newBone,
+        organ: customRatio.organ || newOrgan,
+        plantMatter: customRatio.plantMatter || newPlantMatter,
+        includePlantMatter: customRatio.includePlantMatter || includePlantMatter
+      }
+    });
+  };
+
+useFocusEffect(
+  React.useCallback(() => {
+    const loadRatios = async () => {
+      try {
+        console.log("🔄 Loading ratios on focus");
+        
+        // If we have route params, use those values
+        if (route.params?.selectedRatio) {
+          console.log("📥 Loading ratio from route params:", route.params);
+          
+          const meat = Number(route.params.meat) || 0;
+          const bone = Number(route.params.bone) || 0;
+          const organ = Number(route.params.organ) || 0;
+          const plantMatter = Number(route.params.plantmatter) || 0;
+          const selectedRatioFromParams = route.params.selectedRatio;
+          
+          setSelectedRatio(selectedRatioFromParams);
+          setNewMeat(meat);
+          setNewBone(bone);
+          setNewOrgan(organ);
+          setNewPlantMatter(plantMatter);
+          setIncludePlantMatter(plantMatter > 0);
+          setUserSelectedRatio(true);
+          
+          return; // Exit early
+        }
+        
+        // Otherwise, load from AsyncStorage
+        const savedRatio = await AsyncStorage.getItem('selectedRatio');
+        console.log("📥 Loading from AsyncStorage, selectedRatio:", savedRatio);
+        
+        if (savedRatio === 'custom') {
+          // For custom ratio, load from dedicated custom keys
+          const customMeat = Number(await AsyncStorage.getItem('customMeatRatio')) || 0;
+          const customBone = Number(await AsyncStorage.getItem('customBoneRatio')) || 0;
+          const customOrgan = Number(await AsyncStorage.getItem('customOrganRatio')) || 0;
+          const customPlantMatter = Number(await AsyncStorage.getItem('customPlantMatterRatio')) || 0;
+          const includeP = (await AsyncStorage.getItem('includePlantMatter')) === 'true';
+          
+          console.log("📥 Loading custom ratio:", { 
+            customMeat, customBone, customOrgan, customPlantMatter, includeP 
+          });
+          
+          // Update custom ratio state
+          setCustomRatio({
+            meat: customMeat,
+            bone: customBone,
+            organ: customOrgan,
+            plantMatter: customPlantMatter,
+            includePlantMatter: includeP
+          });
+          
+          // Update main state
+          setNewMeat(customMeat);
+          setNewBone(customBone);
+          setNewOrgan(customOrgan);
+          setNewPlantMatter(customPlantMatter);
+          setIncludePlantMatter(includeP);
+          setSelectedRatio('custom');
+        } else if (savedRatio) {
+          // For predefined ratios
+          const savedMeat = Number(await AsyncStorage.getItem('meatRatio')) || 0;
+          const savedBone = Number(await AsyncStorage.getItem('boneRatio')) || 0;
+          const savedOrgan = Number(await AsyncStorage.getItem('organRatio')) || 0;
+          const savedPlantMatter = Number(await AsyncStorage.getItem('plantMatterRatio')) || 0;
+          const savedIncludePlantMatter = (await AsyncStorage.getItem('includePlantMatter')) === 'true';
+          
+          setSelectedRatio(savedRatio);
+          setNewMeat(savedMeat);
+          setNewBone(savedBone);
+          setNewOrgan(savedOrgan);
+          setNewPlantMatter(savedPlantMatter);
+          setIncludePlantMatter(savedIncludePlantMatter);
+        } else {
+          // Default values
+          setSelectedRatio('80:10:10');
           setNewMeat(80);
           setNewBone(10);
           setNewOrgan(10);
           setNewPlantMatter(0);
           setIncludePlantMatter(false);
         }
-      };
+      } catch (error) {
+        console.log('❌ Failed to load ratios:', error);
+      }
+    };
 
-      loadRatios();
-    }, [route.params])
-  );
+    loadRatios();
+  }, [route.params])
+);
 
   useEffect(() => {
     const saveRatios = async () => {
@@ -249,45 +336,50 @@ const CalculatorScreen: React.FC = () => {
   };  
 
   const setRatio = (meat: number, bone: number, organ: number, plantMatter: number, ratio: string) => {
+    console.log(`✅ Manually setting ratio: ${ratio} (Meat: ${meat}, Bone: ${bone}, Organ: ${organ}, Plant: ${plantMatter})`);
+  
+    // Update state values
     setNewMeat(meat);
     setNewBone(bone);
     setNewOrgan(organ);
     setNewPlantMatter(plantMatter);
-    
-    // Determine includePlantMatter based on actual plant matter value
-    const plantMatterIncluded = plantMatter > 0;
-    setIncludePlantMatter(plantMatterIncluded);
-    
+    setIncludePlantMatter(plantMatter > 0);
     setSelectedRatio(ratio);
-
+    setUserSelectedRatio(true);
+  
+    // Update customRatio state when 'custom' is selected
     if (ratio === 'custom') {
-        setCustomRatio({ meat, bone, organ, plantMatter, includePlantMatter: plantMatterIncluded });
-        
-        // Save custom ratio in AsyncStorage
-        AsyncStorage.setItem('meatRatio', meat.toString());
-        AsyncStorage.setItem('boneRatio', bone.toString());
-        AsyncStorage.setItem('organRatio', organ.toString());
-        AsyncStorage.setItem('plantMatterRatio', plantMatter.toString());
-        AsyncStorage.setItem('selectedRatio', 'custom');
-        AsyncStorage.setItem('includePlantMatter', plantMatterIncluded.toString());
-    } else {
-        AsyncStorage.setItem('selectedRatio', ratio);
-    }
-
-    calculateCorrectors(
-        initialMeatWeight,
-        initialBoneWeight,
-        initialOrganWeight,
-        plantMatterIncluded ? initialPlantMatterWeight : 0,
+      setCustomRatio({
         meat,
         bone,
         organ,
         plantMatter,
-        plantMatterIncluded
-    );
-};
-
-
+        includePlantMatter: plantMatter > 0
+      });
+    }
+  
+    // Save to AsyncStorage immediately and synchronously
+    (async () => {
+      try {
+        const batch = [
+          ['meatRatio', meat.toString()],
+          ['boneRatio', bone.toString()],
+          ['organRatio', organ.toString()],
+          ['plantMatterRatio', plantMatter.toString()],
+          ['selectedRatio', ratio],
+          ['includePlantMatter', (plantMatter > 0).toString()]
+        ];
+  
+        // Use Promise.all for faster parallel saving
+        await Promise.all(batch.map(([key, value]) => AsyncStorage.setItem(key, value)));
+        
+        console.log(`✅ Saved ratio ${ratio} to AsyncStorage`);
+      } catch (error) {
+        console.log('❌ Failed to save ratios:', error);
+      }
+    })();
+  };
+  
   const showInfoAlert = () => {
     Alert.alert(
       'Corrector Info',
@@ -295,6 +387,12 @@ const CalculatorScreen: React.FC = () => {
       [{ text: 'OK' }]
     );
   };
+
+  useEffect(() => {
+    console.log("🖥 Rerender triggered - Current displayed ratio:", {
+      selectedRatio, newMeat, newBone, newOrgan, newPlantMatter, userSelectedRatio
+    });
+  }, [selectedRatio, newMeat, newBone, newOrgan, newPlantMatter, userSelectedRatio]);  
 
   const formatWeight = (value: number, ingredient: string) => {
     const formattedValue = isNaN(value) ? '0.00' : Math.abs(value).toFixed(2);
@@ -375,14 +473,14 @@ const CalculatorScreen: React.FC = () => {
               styles.customButton,
               selectedRatio === 'custom' ? styles.selectedCustomButton : { backgroundColor: 'white', borderColor: 'navy' },
             ]}
-            onPress={navigateToCustomRatio} // Correct navigation action
+            onPress={navigateToCustomRatio}
           >
             <Text style={[
               styles.customButtonText,
               selectedRatio === 'custom' ? { color: 'white' } : { color: 'black' }
             ]}>
               {selectedRatio === 'custom'
-                ? `${customRatio.meat}:${customRatio.bone}:${customRatio.organ}${includePlantMatter ? `:${customRatio.plantMatter}` : ''}` 
+                ? `${customRatio.meat}:${customRatio.bone}:${customRatio.organ}${customRatio.includePlantMatter ? `:${customRatio.plantMatter}` : ''}` 
                 : "Custom Ratio"}
             </Text>
           </TouchableOpacity>

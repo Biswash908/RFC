@@ -102,7 +102,7 @@ const FoodInputScreen: React.FC = () => {
       setSelectedRatio(selectedRatio);
     }
   }, [route.params?.ratio]);  
-  
+
   useEffect(() => {
     const newIngredient = route.params?.updatedIngredient;
     if (newIngredient && newIngredient.name) {
@@ -243,32 +243,44 @@ console.log("🔍 Stored Recipes:", JSON.parse(storedRecipes));
     }
   };  
 
-  useEffect(() => {
-    if (route.params) {
-      const { recipeId, recipeName, ingredients } = route.params;
-      console.log('Received recipeId:', recipeId);
-      console.log('Received recipeName:', recipeName);
-      console.log('Received ingredients:', ingredients);
-  
-      if (ingredients) {
-        const updatedIngredients = ingredients.map((ing) => ({
-          ...ing,
-          unit: ing.unit || globalUnit,
-          meatWeight: ing.meatWeight ?? 0,
-          boneWeight: ing.boneWeight ?? 0,
-          organWeight: ing.organWeight ?? 0,
-          plantMatterWeight: ing.plantMatterWeight ?? 0,
-          totalWeight: ing.totalWeight ?? 0,
-        }));
-        setIngredients(updatedIngredients);
-        calculateTotals(updatedIngredients);
-      }
-  
-      if (recipeName) {
-        setRecipeName(recipeName);
-      }
+ // Replace multiple useEffects with a single, comprehensive one
+useEffect(() => {
+  if (route.params) {
+    console.log('📥 Received in FoodInputScreen:', route.params);
+    
+    // Handle ingredients
+    if (route.params.ingredients) {
+      const updatedIngredients = route.params.ingredients.map((ing) => ({
+        ...ing,
+        unit: ing.unit || globalUnit,
+        meatWeight: ing.meatWeight ?? 0,
+        boneWeight: ing.boneWeight ?? 0,
+        organWeight: ing.organWeight ?? 0,
+        plantMatterWeight: ing.plantMatterWeight ?? 0,
+        totalWeight: ing.totalWeight ?? 0,
+      }));
+      setIngredients(updatedIngredients);
+      calculateTotals(updatedIngredients);
     }
-  }, [route.params]);  
+    
+    // Handle recipe name
+    if (route.params.recipeName) {
+      setRecipeName(route.params.recipeName);
+    }
+    
+    // Handle ratio
+    if (route.params.ratio) {
+      const { meat, bone, organ, plantMatter, selectedRatio } = route.params.ratio;
+      console.log("📥 Loaded ratio in FoodInputScreen:", { meat, bone, organ, plantMatter, selectedRatio });
+      
+      setMeatRatio(meat || 0);
+      setBoneRatio(bone || 0);
+      setOrganRatio(organ || 0);
+      setPlantMatterRatio(plantMatter || 0);
+      setSelectedRatio(selectedRatio || '80:10:10');
+    }
+  }
+}, [route.params, globalUnit]);
 
   const handleDeleteIngredient = (name: string) => {
     Alert.alert(
@@ -453,6 +465,7 @@ console.log("🔍 Stored Recipes:", JSON.parse(storedRecipes));
               bone: totalBone,
               organ: totalOrgan,
               plantmatter: totalPlantMatter,
+              selectedRatio: selectedRatio,
             })
           }>
           <Text style={styles.calculateButtonText}>Select Ratio & Calculate</Text>

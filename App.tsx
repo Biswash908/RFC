@@ -132,6 +132,7 @@ const App: React.FC = () => {
               name="HomeTabs"
               component={HomeTabs}
               options={{ headerShown: false }}
+              initialParams={{ screen: 'HomeTabsHome' }}
             />
             <Stack.Screen
               name="FoodInfoScreen"

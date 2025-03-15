@@ -5,6 +5,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import 'react-native-get-random-values'; // Required for UUID to work in React Native
 import { FontAwesome } from '@expo/vector-icons';
 import { v4 as uuidv4 } from 'uuid'; // Importing UUID
+import axios from 'axios';
 
 const RecipeScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -93,25 +94,13 @@ const RecipeScreen = ({ route }) => {
       const loadRecipes = async () => {
         try {
           const storedRecipes = await AsyncStorage.getItem('recipes');
-          let recipesToSet;
-
-          if (storedRecipes) {
-            const parsedStoredRecipes = JSON.parse(storedRecipes);
-            recipesToSet = [
-              ...defaultRecipes,
-              ...parsedStoredRecipes.filter(r => !defaultRecipes.some(dr => dr.id === r.id)),
-            ];
-          } else {
-            recipesToSet = defaultRecipes;
-            await AsyncStorage.setItem('recipes', JSON.stringify(defaultRecipes));
-          }
-
-          setRecipes(recipesToSet);
+          const parsedRecipes = storedRecipes ? JSON.parse(storedRecipes) : [];
+          console.log('📥 Loaded recipes in RecipeScreen:', parsedRecipes);
+          setRecipes(parsedRecipes);
         } catch (error) {
-          console.log('Error loading recipes: ', error);
+          console.log('❌ Error loading recipes:', error);
         }
       };
-
       loadRecipes();
     }, [])
   );
@@ -203,37 +192,59 @@ const RecipeScreen = ({ route }) => {
           text: 'Yes',
           onPress: async () => {
             try {
+              // Parse the ratio string into components
+              let ratioObject = {};
+              
+              if (recipe.ratio && recipe.ratio.includes(':')) {
+                const ratioParts = recipe.ratio.split(':').map(Number);
+                ratioObject = {
+                  meat: ratioParts[0] || 0,
+                  bone: ratioParts[1] || 0,
+                  organ: ratioParts[2] || 0,
+                  plantMatter: ratioParts[3] || 0,
+                  selectedRatio: recipe.ratio
+                };
+              } else {
+                // Default ratio if none exists
+                ratioObject = {
+                  meat: 80,
+                  bone: 10,
+                  organ: 10,
+                  plantMatter: 0,
+                  selectedRatio: '80:10:10'
+                };
+              }
+              
+              console.log('📤 Passing ratio from RecipeScreen:', ratioObject);
+              
+              // Store in AsyncStorage for persistence
               await AsyncStorage.setItem('selectedRecipe', JSON.stringify({
                 ingredients: recipe.ingredients,
                 recipeName: recipe.name,
                 recipeId: recipe.id,
-                selectedRatio: recipe.selectedRatio || '80:10:10', // ✅ Include ratio
+                ratio: ratioObject
               }));
-  
-              console.log('Navigating to FoodInputScreen with:', {
-                recipeId: recipe.id,
-                ingredients: recipe.ingredients,
-                selectedRatio: recipe.selectedRatio || '80:10:10',
-              });
-  
+              
+              // Navigate with all necessary parameters
               navigation.navigate('HomeTabs', {
                 screen: 'HomeTabsHome',
                 params: {
                   recipeName: recipe.name,
                   recipeId: recipe.id,
                   ingredients: recipe.ingredients,
-                  selectedRatio: recipe.selectedRatio || '80:10:10',
+                  ratio: ratioObject
                 },
               });
             } catch (error) {
-              console.error('Error loading recipe into FoodInputScreen', error);
+              console.error('❌ Error loading recipe into FoodInputScreen', error);
+              Alert.alert('Error', 'Failed to load the recipe. Please try again.');
             }
           },
         },
       ],
       { cancelable: true }
     );
-  };  
+  };
 
   const handleOpenEditModal = (recipe) => {
     setRecipeToEdit(recipe);
