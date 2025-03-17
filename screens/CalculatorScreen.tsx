@@ -111,7 +111,40 @@ const CalculatorScreen: React.FC = () => {
       }
     });
   };
-
+  useEffect(() => {
+    if (route.params?.ratio) {
+      console.log("Handling ratio from route params:", route.params.ratio);
+      
+      const { meat, bone, organ, selectedRatio: routeRatio } = route.params.ratio;
+      
+      // Override any manually selected ratio
+      setUserSelectedRatio(false);
+      
+      // Update state
+      setNewMeat(meat);
+      setNewBone(bone);
+      setNewOrgan(organ);
+      setSelectedRatio(routeRatio);
+      
+      // Update custom ratio if needed
+      if (routeRatio === "custom") {
+        setCustomRatio({
+          meat: meat,
+          bone: bone,
+          organ: organ,
+        });
+      }
+      
+      // Save to AsyncStorage
+      AsyncStorage.multiSet([
+        ["meatRatio", meat.toString()],
+        ["boneRatio", bone.toString()],
+        ["organRatio", organ.toString()],
+        ["selectedRatio", routeRatio]
+      ]);
+    }
+  }, [route.params?.ratio]);
+// Update the loadRatios function in useFocusEffect
 useFocusEffect(
   React.useCallback(() => {
     const loadRatios = async () => {
@@ -122,24 +155,48 @@ useFocusEffect(
         if (route.params?.selectedRatio) {
           console.log("📥 Loading ratio from route params:", route.params);
           
-          const meat = Number(route.params.meat) || 0;
-          const bone = Number(route.params.bone) || 0;
-          const organ = Number(route.params.organ) || 0;
-          const plantMatter = Number(route.params.plantmatter) || 0;
+          // Parse the ratio string (e.g., "65:25:10" -> [65, 25, 10])
           const selectedRatioFromParams = route.params.selectedRatio;
+          const ratioParts = selectedRatioFromParams.split(':').map(Number);
           
-          setSelectedRatio(selectedRatioFromParams);
-          setNewMeat(meat);
-          setNewBone(bone);
-          setNewOrgan(organ);
-          setNewPlantMatter(plantMatter);
-          setIncludePlantMatter(plantMatter > 0);
+          const meatRatio = ratioParts[0] || 0;
+          const boneRatio = ratioParts[1] || 0;
+          const organRatio = ratioParts[2] || 0;
+          const plantMatterRatio = ratioParts[3] || 0;
+          
+          console.log("📊 Parsed ratio:", { meatRatio, boneRatio, organRatio, plantMatterRatio });
+          
+          // Check if this is a standard ratio or custom
+          const isStandardRatio = 
+            selectedRatioFromParams === '80:10:10' || 
+            selectedRatioFromParams === '75:15:10' || 
+            selectedRatioFromParams === '70:10:10:10' || 
+            selectedRatioFromParams === '65:15:10:10';
+          
+          // If it's not a standard ratio, mark it as custom
+          setSelectedRatio(isStandardRatio ? selectedRatioFromParams : 'custom');
+          
+          // If it's custom, update the custom ratio state
+          if (!isStandardRatio) {
+            setCustomRatio({
+              meat: meatRatio,
+              bone: boneRatio,
+              organ: organRatio,
+              plantMatter: plantMatterRatio,
+              includePlantMatter: plantMatterRatio > 0
+            });
+          }
+          
+          setNewMeat(meatRatio);
+          setNewBone(boneRatio);
+          setNewOrgan(organRatio);
+          setNewPlantMatter(plantMatterRatio);
+          setIncludePlantMatter(plantMatterRatio > 0);
           setUserSelectedRatio(true);
           
           return; // Exit early
         }
-        
-        // Otherwise, load from AsyncStorage
+
         const savedRatio = await AsyncStorage.getItem('selectedRatio');
         console.log("📥 Loading from AsyncStorage, selectedRatio:", savedRatio);
         
@@ -172,19 +229,30 @@ useFocusEffect(
           setIncludePlantMatter(includeP);
           setSelectedRatio('custom');
         } else if (savedRatio) {
-          // For predefined ratios
-          const savedMeat = Number(await AsyncStorage.getItem('meatRatio')) || 0;
-          const savedBone = Number(await AsyncStorage.getItem('boneRatio')) || 0;
-          const savedOrgan = Number(await AsyncStorage.getItem('organRatio')) || 0;
-          const savedPlantMatter = Number(await AsyncStorage.getItem('plantMatterRatio')) || 0;
-          const savedIncludePlantMatter = (await AsyncStorage.getItem('includePlantMatter')) === 'true';
+          // For predefined ratios, parse the ratio string
+          if (savedRatio.includes(':')) {
+            const ratioParts = savedRatio.split(':').map(Number);
+            setNewMeat(ratioParts[0] || 0);
+            setNewBone(ratioParts[1] || 0);
+            setNewOrgan(ratioParts[2] || 0);
+            setNewPlantMatter(ratioParts[3] || 0);
+            setIncludePlantMatter(ratioParts.length > 3 && ratioParts[3] > 0);
+          } else {
+            // Fallback to saved values
+            const savedMeat = Number(await AsyncStorage.getItem('meatRatio')) || 0;
+            const savedBone = Number(await AsyncStorage.getItem('boneRatio')) || 0;
+            const savedOrgan = Number(await AsyncStorage.getItem('organRatio')) || 0;
+            const savedPlantMatter = Number(await AsyncStorage.getItem('plantMatterRatio')) || 0;
+            const savedIncludePlantMatter = (await AsyncStorage.getItem('includePlantMatter')) === 'true';
+            
+            setNewMeat(savedMeat);
+            setNewBone(savedBone);
+            setNewOrgan(savedOrgan);
+            setNewPlantMatter(savedPlantMatter);
+            setIncludePlantMatter(savedIncludePlantMatter);
+          }
           
           setSelectedRatio(savedRatio);
-          setNewMeat(savedMeat);
-          setNewBone(savedBone);
-          setNewOrgan(savedOrgan);
-          setNewPlantMatter(savedPlantMatter);
-          setIncludePlantMatter(savedIncludePlantMatter);
         } else {
           // Default values
           setSelectedRatio('80:10:10');
@@ -471,16 +539,32 @@ useFocusEffect(
           <TouchableOpacity
             style={[
               styles.customButton,
-              selectedRatio === 'custom' ? styles.selectedCustomButton : { backgroundColor: 'white', borderColor: 'navy' },
+              selectedRatio === 'custom' || 
+              (selectedRatio !== '80:10:10' && 
+              selectedRatio !== '75:15:10' && 
+              selectedRatio !== '70:10:10:10' && 
+              selectedRatio !== '65:15:10:10')
+                ? styles.selectedCustomButton 
+                : { backgroundColor: 'white', borderColor: 'navy' },
             ]}
             onPress={navigateToCustomRatio}
           >
             <Text style={[
               styles.customButtonText,
-              selectedRatio === 'custom' ? { color: 'white' } : { color: 'black' }
+              selectedRatio === 'custom' || 
+              (selectedRatio !== '80:10:10' && 
+              selectedRatio !== '75:15:10' && 
+              selectedRatio !== '70:10:10:10' && 
+              selectedRatio !== '65:15:10:10')
+                ? { color: 'white' } 
+                : { color: 'black' }
             ]}>
-              {selectedRatio === 'custom'
-                ? `${customRatio.meat}:${customRatio.bone}:${customRatio.organ}${customRatio.includePlantMatter ? `:${customRatio.plantMatter}` : ''}` 
+              {selectedRatio === 'custom' || 
+              (selectedRatio !== '80:10:10' && 
+                selectedRatio !== '75:15:10' && 
+                selectedRatio !== '70:10:10:10' && 
+                selectedRatio !== '65:15:10:10')
+                ? `${newMeat}:${newBone}:${newOrgan}${includePlantMatter ? `:${newPlantMatter}` : ''}`
                 : "Custom Ratio"}
             </Text>
           </TouchableOpacity>
