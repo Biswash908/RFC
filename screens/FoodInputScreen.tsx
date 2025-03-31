@@ -1,209 +1,429 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, TextInput, SafeAreaView, Modal, StatusBar } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActivityIndicator } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
-import { useUnit } from '../UnitContext';
-import { v4 as uuidv4 } from 'uuid';
+"use client"
+
+import React from "react"
+import { useState, useEffect } from "react"
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  TextInput,
+  SafeAreaView,
+  Modal,
+  StatusBar,
+  Platform,
+  Dimensions,
+} from "react-native"
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native"
+import AsyncStorage from "@react-native-async-storage/async-storage"
+import { ActivityIndicator } from "react-native"
+import { FontAwesome } from "@expo/vector-icons"
+import { useUnit } from "../UnitContext"
+import { v4 as uuidv4 } from "uuid"
+
+// Added for responsive styling
+const isIOS = Platform.OS === "ios"
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
+const isSmallDevice = SCREEN_WIDTH < 375 // iPhone SE and similar sized devices
+
+// Create a responsive sizing utility
+const scale = SCREEN_WIDTH / 375 // Base scale on iPhone 8 width
+const verticalScale = SCREEN_HEIGHT / 812 // Base scale on iPhone X height
+
+// Responsive sizing functions
+const rs = (size: number) => Math.round(size * (isIOS ? Math.min(scale, 1.2) : scale))
+const vs = (size: number) => Math.round(size * (isIOS ? Math.min(verticalScale, 1.2) : verticalScale))
+const ms = (size: number, factor = 0.5) => {
+  return Math.round(size + (rs(size) - size) * factor)
+}
 
 export type Ingredient = {
-  name: string;
-  meatWeight: number;
-  boneWeight: number;
-  organWeight: number;
-  plantMatterWeight?: number;
-  totalWeight: number;
-  unit: 'g' | 'kg' | 'lbs';
-  type?: 'Fruit' | 'Vegetable' | 'Nut & Seed';
-};
+  name: string
+  meatWeight: number
+  boneWeight: number
+  organWeight: number
+  plantMatterWeight?: number
+  totalWeight: number
+  unit: "g" | "kg" | "lbs"
+  type?: "Fruit" | "Vegetable" | "Nut & Seed"
+}
 
 export type RootStackParamList = {
-  FoodInputScreen: { 
-    recipeId: string; 
-    recipeName: string; 
-    ingredients: Ingredient[]; 
-  };
-  FoodInfoScreen: { ingredient: Ingredient; editMode: boolean };
-  SearchScreen: undefined;
-  CalculatorScreen: { meat: number; bone: number; organ: number };
-};
+  FoodInputScreen: {
+    recipeId: string
+    recipeName: string
+    ingredients: Ingredient[]
+  }
+  FoodInfoScreen: { ingredient: Ingredient; editMode: boolean }
+  SearchScreen: undefined
+  CalculatorScreen: { meat: number; bone: number; organ: number }
+}
 
-type FoodInputScreenRouteProp = RouteProp<RootStackParamList, 'FoodInputScreen'>;
+type FoodInputScreenRouteProp = RouteProp<RootStackParamList, "FoodInputScreen">
 
 const FoodInputScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const route = useRoute<FoodInputScreenRouteProp>();
-  const { unit: globalUnit } = useUnit();
+  const navigation = useNavigation()
+  const route = useRoute<FoodInputScreenRouteProp>()
+  const { unit: globalUnit } = useUnit()
 
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [totalMeat, setTotalMeat] = useState(0);
-  const [totalBone, setTotalBone] = useState(0);
-  const [totalOrgan, setTotalOrgan] = useState(0);
-  const [totalPlantMatter, setTotalPlantMatter] = useState(0);
-  const [totalWeight, setTotalWeight] = useState(0);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([])
+  const [totalMeat, setTotalMeat] = useState(0)
+  const [totalBone, setTotalBone] = useState(0)
+  const [totalOrgan, setTotalOrgan] = useState(0)
+  const [totalPlantMatter, setTotalPlantMatter] = useState(0)
+  const [totalWeight, setTotalWeight] = useState(0)
 
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [recipeName, setRecipeName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  
-  const [newMeat, setNewMeat] = useState<number>(0);
-  const [newBone, setNewBone] = useState<number>(0);
-  const [newOrgan, setNewOrgan] = useState<number>(0);
-  const [newPlantMatter, setNewPlantMatter] = useState<number>(0); // For plant matter
+  const [isModalVisible, setIsModalVisible] = useState(false)
+  const [isSaveOptionsModalVisible, setIsSaveOptionsModalVisible] = useState(false)
+  const [isNewRecipeModalVisible, setIsNewRecipeModalVisible] = useState(false)
+  const [recipeName, setRecipeName] = useState("")
+  const [newRecipeName, setNewRecipeName] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
-  const [meatRatio, setMeatRatio] = useState(0);
-  const [boneRatio, setBoneRatio] = useState(0);
-  const [organRatio, setOrganRatio] = useState(0);
-  const [plantMatterRatio, setPlantMatterRatio] = useState(0); // For plant matter
-  const [selectedRatio, setSelectedRatio] = useState<string>('80:10:10'); 
+  const [newMeat, setNewMeat] = useState<number>(0)
+  const [newBone, setNewBone] = useState<number>(0)
+  const [newOrgan, setNewOrgan] = useState<number>(0)
+  const [newPlantMatter, setNewPlantMatter] = useState<number>(0) // For plant matter
+
+  const [meatRatio, setMeatRatio] = useState(0)
+  const [boneRatio, setBoneRatio] = useState(0)
+  const [organRatio, setOrganRatio] = useState(0)
+  const [plantMatterRatio, setPlantMatterRatio] = useState(0) // For plant matter
+  const [selectedRatio, setSelectedRatio] = useState<string>("80:10:10")
 
   useEffect(() => {
-    const newIngredient = route.params?.updatedIngredient;
+    const newIngredient = route.params?.updatedIngredient
     if (newIngredient) {
-      newIngredient.unit = newIngredient.unit || globalUnit;
-  
+      newIngredient.unit = newIngredient.unit || globalUnit
+
       // Default undefined weights to 0
-      newIngredient.meatWeight = newIngredient.meatWeight ?? 0;
-      newIngredient.boneWeight = newIngredient.boneWeight ?? 0;
-      newIngredient.organWeight = newIngredient.organWeight ?? 0;
-      newIngredient.plantMatterWeight = newIngredient.plantMatterWeight ?? 0;
-  
-      const existingIngredientIndex = ingredients.findIndex(ing => ing.name === newIngredient.name);
-      let updatedIngredients;
+      newIngredient.meatWeight = newIngredient.meatWeight ?? 0
+      newIngredient.boneWeight = newIngredient.boneWeight ?? 0
+      newIngredient.organWeight = newIngredient.organWeight ?? 0
+      newIngredient.plantMatterWeight = newIngredient.plantMatterWeight ?? 0
+
+      const existingIngredientIndex = ingredients.findIndex((ing) => ing.name === newIngredient.name)
+      let updatedIngredients
       if (existingIngredientIndex !== -1) {
-        updatedIngredients = ingredients.map((ing, index) =>
-          index === existingIngredientIndex ? newIngredient : ing
-        );
+        updatedIngredients = ingredients.map((ing, index) => (index === existingIngredientIndex ? newIngredient : ing))
       } else {
-        updatedIngredients = [...ingredients, newIngredient];
+        updatedIngredients = [...ingredients, newIngredient]
       }
-  
-      setIngredients(updatedIngredients);
-      calculateTotals(updatedIngredients);
+
+      setIngredients(updatedIngredients)
+      calculateTotals(updatedIngredients)
     }
-  }, [route.params?.updatedIngredient]);
+  }, [route.params?.updatedIngredient])
 
   useEffect(() => {
     if (route.params?.ratio) {
-      const { meat, bone, organ, plantMatter, selectedRatio } = route.params.ratio;
-  
-      console.log("📥 Received ratio in FoodInputScreen from CS:", { meat, bone, organ, plantMatter, selectedRatio });
-  
-      setMeatRatio(meat);
-      setBoneRatio(bone);
-      setOrganRatio(organ);
-      
+      const { meat, bone, organ, plantMatter, selectedRatio } = route.params.ratio
+
+      console.log("📥 Received ratio in FoodInputScreen from CS:", {
+        meat,
+        bone,
+        organ,
+        plantMatter,
+        selectedRatio,
+      })
+
+      setMeatRatio(meat)
+      setBoneRatio(bone)
+      setOrganRatio(organ)
+
       // ✅ Only set plant matter if it exists (avoids potential errors)
       if (plantMatter !== undefined) {
-        setPlantMatterRatio(plantMatter);
+        setPlantMatterRatio(plantMatter)
       }
-  
-      setSelectedRatio(selectedRatio);
+
+      setSelectedRatio(selectedRatio)
     }
-  }, [route.params?.ratio]);  
+  }, [route.params?.ratio])
 
   useEffect(() => {
-    const newIngredient = route.params?.updatedIngredient;
+    const newIngredient = route.params?.updatedIngredient
     if (newIngredient && newIngredient.name) {
-      newIngredient.unit = newIngredient.unit || globalUnit;
-      newIngredient.meatWeight = newIngredient.meatWeight ?? 0;
-      newIngredient.boneWeight = newIngredient.boneWeight ?? 0;
-      newIngredient.organWeight = newIngredient.organWeight ?? 0;
-      newIngredient.plantMatterWeight = newIngredient.plantMatterWeight ?? 0;
-  
-      const existingIngredientIndex = ingredients.findIndex(ing => ing.name === newIngredient.name);
-      const updatedIngredients = existingIngredientIndex !== -1
-        ? ingredients.map((ing, index) => (index === existingIngredientIndex ? newIngredient : ing))
-        : [...ingredients, newIngredient];
-  
-      setIngredients(updatedIngredients);
-      calculateTotals(updatedIngredients);
-    }
-  }, [route.params?.updatedIngredient]);
-  
+      newIngredient.unit = newIngredient.unit || globalUnit
+      newIngredient.meatWeight = newIngredient.meatWeight ?? 0
+      newIngredient.boneWeight = newIngredient.boneWeight ?? 0
+      newIngredient.organWeight = newIngredient.organWeight ?? 0
+      newIngredient.plantMatterWeight = newIngredient.plantMatterWeight ?? 0
 
-  const convertToUnit = (weight: number, fromUnit: 'g' | 'kg' | 'lbs', toUnit: 'g' | 'kg' | 'lbs') => {
-    if (fromUnit === toUnit) return weight;
-    switch (fromUnit) {
-      case 'g':
-        return toUnit === 'kg' ? weight / 1000 : weight / 453.592;
-      case 'kg':
-        return toUnit === 'g' ? weight * 1000 : weight * 2.20462;
-      case 'lbs':
-        return toUnit === 'g' ? weight * 453.592 : weight / 2.20462;
+      const existingIngredientIndex = ingredients.findIndex((ing) => ing.name === newIngredient.name)
+      const updatedIngredients =
+        existingIngredientIndex !== -1
+          ? ingredients.map((ing, index) => (index === existingIngredientIndex ? newIngredient : ing))
+          : [...ingredients, newIngredient]
+
+      setIngredients(updatedIngredients)
+      calculateTotals(updatedIngredients)
     }
-  };
+  }, [route.params?.updatedIngredient])
+
+  const convertToUnit = (weight: number, fromUnit: "g" | "kg" | "lbs", toUnit: "g" | "kg" | "lbs") => {
+    if (fromUnit === toUnit) return weight
+    switch (fromUnit) {
+      case "g":
+        return toUnit === "kg" ? weight / 1000 : weight / 453.592
+      case "kg":
+        return toUnit === "g" ? weight * 1000 : weight * 2.20462
+      case "lbs":
+        return toUnit === "g" ? weight * 453.592 : weight / 2.20462
+    }
+  }
 
   const calculateTotals = (updatedIngredients: Ingredient[]) => {
     const totalWt = updatedIngredients.reduce(
       (sum, ing) => sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit),
-      0
-    );
-  
+      0,
+    )
+
     const meatWeight = updatedIngredients.reduce(
       (sum, ing) => sum + convertToUnit(ing.meatWeight, ing.unit, globalUnit),
-      0
-    );
-  
+      0,
+    )
+
     const boneWeight = updatedIngredients.reduce(
       (sum, ing) => sum + convertToUnit(ing.boneWeight, ing.unit, globalUnit),
-      0
-    );
-  
+      0,
+    )
+
     const organWeight = updatedIngredients.reduce(
       (sum, ing) => sum + convertToUnit(ing.organWeight, ing.unit, globalUnit),
-      0
-    );
-  
+      0,
+    )
+
     // Correctly sum all plant matter (fruits, vegetables, nuts)
     const plantMatterWeight = updatedIngredients.reduce(
       (sum, ing) =>
-        ing.type === 'Fruit' ||
-        ing.type === 'Vegetable' ||
-        ing.type === 'Nut & Seed'
+        ing.type === "Fruit" || ing.type === "Vegetable" || ing.type === "Nut & Seed"
           ? sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit)
           : sum,
-      0
-    );
-  
-    setTotalWeight(totalWt);
-    setTotalMeat(meatWeight);
-    setTotalBone(boneWeight);
-    setTotalOrgan(organWeight);
-    setTotalPlantMatter(plantMatterWeight);
-  };
-  
-  const handleSaveRecipe = async () => {
-    if (!recipeName.trim()) {
-      setIsModalVisible(true);
-      return;
-    }
-  
-    if (ingredients.length === 0) {
-      Alert.alert('Error', "Ingredients can't be empty.");
-      return;
-    }
-  
-    setIsSaving(true);
+      0,
+    )
+
+    setTotalWeight(totalWt)
+    setTotalMeat(meatWeight)
+    setTotalBone(boneWeight)
+    setTotalOrgan(organWeight)
+    setTotalPlantMatter(plantMatterWeight)
+  }
+
+  // Add this function to handle custom ratio persistence
+  const loadCustomRatio = async () => {
     try {
-      const storedRecipes = await AsyncStorage.getItem('recipes');
-console.log("🔍 Stored Recipes:", JSON.parse(storedRecipes));
-      const parsedRecipes = storedRecipes ? JSON.parse(storedRecipes) : [];
-  
-      const generateUniqueRecipeName = (name: string, existingRecipes: any[]) => {
-        let newName = name;
-        let counter = 1;
-        while (existingRecipes.some((r: any) => r.name.toLowerCase() === newName.toLowerCase())) {
-          newName = `${name} (${counter})`;
-          counter++;
+      const customMeatRatio = await AsyncStorage.getItem("customMeatRatio")
+      const customBoneRatio = await AsyncStorage.getItem("customBoneRatio")
+      const customOrganRatio = await AsyncStorage.getItem("customOrganRatio")
+      const customPlantMatterRatio = await AsyncStorage.getItem("customPlantMatterRatio")
+      const includePlantMatter = await AsyncStorage.getItem("includePlantMatter")
+
+      return {
+        meat: Number(customMeatRatio || "0"),
+        bone: Number(customBoneRatio || "0"),
+        organ: Number(customOrganRatio || "0"),
+        plantMatter: Number(customPlantMatterRatio || "0"),
+        includePlantMatter: includePlantMatter === "true",
+      }
+    } catch (error) {
+      console.error("Failed to load custom ratio:", error)
+      return null
+    }
+  }
+
+  // Get the current ratio values from AsyncStorage
+  const getCurrentRatioValues = async () => {
+    try {
+      const meatRatio = await AsyncStorage.getItem("meatRatio")
+      const boneRatio = await AsyncStorage.getItem("boneRatio")
+      const organRatio = await AsyncStorage.getItem("organRatio")
+      const plantMatterRatio = await AsyncStorage.getItem("plantMatterRatio")
+      const selectedRatio = await AsyncStorage.getItem("selectedRatio")
+      const includePlantMatter = await AsyncStorage.getItem("includePlantMatter")
+
+      // If it's a custom ratio, load the custom values
+      if (selectedRatio === "custom") {
+        const customRatio = await loadCustomRatio()
+        if (customRatio) {
+          return {
+            meat: customRatio.meat,
+            bone: customRatio.bone,
+            organ: customRatio.organ,
+            plantMatter: customRatio.plantMatter,
+            selectedRatio: "custom",
+            includePlantMatter: customRatio.includePlantMatter,
+          }
         }
-        return newName;
-      };
-  
-      const uniqueRecipeName = generateUniqueRecipeName(recipeName.trim(), parsedRecipes);
-  
-      // Include the ratio when saving the recipe
+      }
+
+      return {
+        meat: Number(meatRatio || "0"),
+        bone: Number(boneRatio || "0"),
+        organ: Number(organRatio || "0"),
+        plantMatter: Number(plantMatterRatio || "0"),
+        selectedRatio: selectedRatio || "80:10:10",
+        includePlantMatter: includePlantMatter === "true",
+      }
+    } catch (error) {
+      console.error("Failed to get current ratio values:", error)
+      return null
+    }
+  }
+
+  // Add a function to handle saving the current ratio to the recipe
+  const saveCurrentRatioToRecipe = async (recipeId: string) => {
+    try {
+      // Get the current ratio values
+      const ratioData = await getCurrentRatioValues()
+
+      if (recipeId && ratioData) {
+        // If it's a custom ratio, make sure to save the custom values
+        if (ratioData.selectedRatio === "custom") {
+          const customRatio = await loadCustomRatio()
+          if (customRatio) {
+            ratioData.meat = customRatio.meat
+            ratioData.bone = customRatio.bone
+            ratioData.organ = customRatio.organ
+            ratioData.plantMatter = customRatio.plantMatter
+            ratioData.includePlantMatter = customRatio.includePlantMatter
+          }
+        }
+
+        await AsyncStorage.setItem(`recipe_ratio_${recipeId}`, JSON.stringify(ratioData))
+
+        // Clear the temporary modification flag
+        await AsyncStorage.removeItem("tempRatioModified")
+        await AsyncStorage.removeItem("userSelectedRatio")
+
+        console.log(`✅ Permanently saved ratio for recipe ${recipeId}:`, ratioData)
+      }
+    } catch (error) {
+      console.error("Failed to save ratio to recipe:", error)
+    }
+  }
+
+  // Function to update an existing recipe
+  const updateExistingRecipe = async () => {
+    if (ingredients.length === 0) {
+      Alert.alert("Error", "Ingredients can't be empty.")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const storedRecipes = await AsyncStorage.getItem("recipes")
+      const parsedRecipes = storedRecipes ? JSON.parse(storedRecipes) : []
+      const currentRecipeId = await AsyncStorage.getItem("currentRecipeId")
+
+      if (!currentRecipeId) {
+        Alert.alert("Error", "No recipe selected to update.")
+        return
+      }
+
+      // Get the current temporary ratio values
+      const tempMeatRatio = (await AsyncStorage.getItem("tempMeatRatio")) || newMeat.toString()
+      const tempBoneRatio = (await AsyncStorage.getItem("tempBoneRatio")) || newBone.toString()
+      const tempOrganRatio = (await AsyncStorage.getItem("tempOrganRatio")) || newOrgan.toString()
+      const tempSelectedRatio = (await AsyncStorage.getItem("tempSelectedRatio")) || selectedRatio
+
+      // Create the updated ratio object using the temporary values
+      const ratioObject = {
+        meat: Number(tempMeatRatio),
+        bone: Number(tempBoneRatio),
+        organ: Number(tempOrganRatio),
+        plantMatter: newPlantMatter,
+        selectedRatio: tempSelectedRatio,
+        isUserDefined: true,
+      }
+
+      console.log("✅ Saving recipe with ratio:", ratioObject)
+
+      // Update the existing recipe
+      const updatedRecipes = parsedRecipes.map((recipe) => {
+        if (recipe.id === currentRecipeId) {
+          return {
+            ...recipe,
+            name: recipeName,
+            totalMeat,
+            totalBone,
+            totalOrgan,
+            totalPlantMatter,
+            totalWeight,
+            ratio:
+              ratioObject.selectedRatio === "custom"
+                ? `${ratioObject.meat}:${ratioObject.bone}:${ratioObject.organ}${
+                    ratioObject.plantMatter > 0 ? `:${ratioObject.plantMatter}` : ""
+                  }`
+                : ratioObject.selectedRatio || "80:10:10",
+            ingredients: ingredients.map((ing) => ({
+              name: ing.name,
+              meatWeight: ing.meatWeight,
+              boneWeight: ing.boneWeight,
+              organWeight: ing.organWeight,
+              plantMatterWeight: ing.plantMatterWeight || 0,
+              totalWeight: ing.totalWeight,
+              unit: ing.unit,
+              type: ing.type || null,
+            })),
+          }
+        }
+        return recipe
+      })
+
+      await AsyncStorage.setItem("recipes", JSON.stringify(updatedRecipes))
+
+      // Save the current ratio to the recipe
+      await saveCurrentRatioToRecipe(currentRecipeId)
+
+      Alert.alert("Success", `Recipe "${recipeName}" updated successfully!`)
+      setHasUnsavedChanges(false)
+      await AsyncStorage.setItem("hasUnsavedChanges", "false")
+      // Store the updated state as the new original state
+      originalIngredientsRef.current = JSON.parse(JSON.stringify(ingredients))
+      originalRatioRef.current = ratioObject
+    } catch (error) {
+      Alert.alert("Error", "Failed to update the recipe.")
+      console.error("Failed to update recipe", error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Function to create a new recipe
+  const createNewRecipe = async () => {
+    if (!newRecipeName.trim()) {
+      Alert.alert("Error", "Recipe name can't be empty.")
+      return
+    }
+
+    if (ingredients.length === 0) {
+      Alert.alert("Error", "Ingredients can't be empty.")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const storedRecipes = await AsyncStorage.getItem("recipes")
+      const parsedRecipes = storedRecipes ? JSON.parse(storedRecipes) : []
+
+      const generateUniqueRecipeName = (name: string, existingRecipes: any[]) => {
+        let newName = name
+        let counter = 1
+        while (existingRecipes.some((r: any) => r.name.toLowerCase() === newName.toLowerCase())) {
+          newName = `${name} (${counter})`
+          counter++
+        }
+        return newName
+      }
+
+      const uniqueRecipeName = generateUniqueRecipeName(newRecipeName.trim(), parsedRecipes)
+
+      // Get the current ratio values
+      const ratioData = await getCurrentRatioValues()
+
+      // Create a new recipe
       const newRecipe = {
         id: uuidv4(),
         name: uniqueRecipeName,
@@ -212,10 +432,13 @@ console.log("🔍 Stored Recipes:", JSON.parse(storedRecipes));
         totalOrgan,
         totalPlantMatter,
         totalWeight,
-        ratio: selectedRatio === 'custom'
-          ? `${newMeat}:${newBone}:${newOrgan}${newPlantMatter > 0 ? `:${newPlantMatter}` : ''}`
-          : selectedRatio, // ✅ Save custom ratio as numbers, not "custom"
-        ingredients: ingredients.map(ing => ({
+        ratio:
+          ratioData?.selectedRatio === "custom"
+            ? `${ratioData.meat}:${ratioData.bone}:${ratioData.organ}${
+                ratioData.plantMatter > 0 ? `:${ratioData.plantMatter}` : ""
+              }`
+            : ratioData?.selectedRatio || "80:10:10",
+        ingredients: ingredients.map((ing) => ({
           name: ing.name,
           meatWeight: ing.meatWeight,
           boneWeight: ing.boneWeight,
@@ -225,185 +448,256 @@ console.log("🔍 Stored Recipes:", JSON.parse(storedRecipes));
           unit: ing.unit,
           type: ing.type || null,
         })),
-      };
-      
-      console.log("✅ Saving Recipe:", newRecipe); // Add this log          
-  
-      const updatedRecipes = [...parsedRecipes, newRecipe];
-      await AsyncStorage.setItem('recipes', JSON.stringify(updatedRecipes));
-  
-      Alert.alert('Success', `Recipe saved successfully as "${uniqueRecipeName}"!`);
-      setIsModalVisible(false);
-      setRecipeName('');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save the recipe.');
-      console.error('Failed to save recipe', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };  
+      }
 
- // Replace multiple useEffects with a single, comprehensive one
-useEffect(() => {
-  if (route.params) {
-    console.log('📥 Received in FoodInputScreen:', route.params);
-    
-    // Handle ingredients
-    if (route.params.ingredients) {
-      const updatedIngredients = route.params.ingredients.map((ing) => ({
-        ...ing,
-        unit: ing.unit || globalUnit,
-        meatWeight: ing.meatWeight ?? 0,
-        boneWeight: ing.boneWeight ?? 0,
-        organWeight: ing.organWeight ?? 0,
-        plantMatterWeight: ing.plantMatterWeight ?? 0,
-        totalWeight: ing.totalWeight ?? 0,
-      }));
-      setIngredients(updatedIngredients);
-      calculateTotals(updatedIngredients);
-    }
-    
-    // Handle recipe name
-    if (route.params.recipeName) {
-      setRecipeName(route.params.recipeName);
-    }
-    
-    // Handle ratio
-    if (route.params.ratio) {
-      const { meat, bone, organ, plantMatter, selectedRatio } = route.params.ratio;
-      console.log("📥 Loaded ratio in FoodInputScreen:", { meat, bone, organ, plantMatter, selectedRatio });
-      
-      setMeatRatio(meat || 0);
-      setBoneRatio(bone || 0);
-      setOrganRatio(organ || 0);
-      setPlantMatterRatio(plantMatter || 0);
-      setSelectedRatio(selectedRatio || '80:10:10');
+      const updatedRecipes = [...parsedRecipes, newRecipe]
+      await AsyncStorage.setItem("recipes", JSON.stringify(updatedRecipes))
+
+      // Save the current ratio to the new recipe
+      await saveCurrentRatioToRecipe(newRecipe.id)
+
+      // Update the current recipe ID to the new recipe
+      await AsyncStorage.setItem("currentRecipeId", newRecipe.id)
+
+      // Update the recipe name in the UI
+      setRecipeName(uniqueRecipeName)
+
+      Alert.alert("Success", `New recipe "${uniqueRecipeName}" created successfully!`)
+      setIsNewRecipeModalVisible(false)
+      setIsSaveOptionsModalVisible(false)
+      setNewRecipeName("")
+    } catch (error) {
+      Alert.alert("Error", "Failed to create the new recipe.")
+      console.error("Failed to create new recipe", error)
+    } finally {
+      setIsSaving(false)
     }
   }
-}, [route.params, globalUnit]);
+
+  const loadedRecipeIdRef = React.useRef<string | null>(null)
+  const originalIngredientsRef = React.useRef<Ingredient[]>([])
+  const originalRatioRef = React.useRef<any>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
+  // Modify the handleSaveRecipe function to show the save options modal
+  const handleSaveRecipe = async () => {
+    if (!recipeName.trim()) {
+      setIsModalVisible(true) // Show modal to add recipe name
+      return
+    }
+
+    if (ingredients.length === 0) {
+      Alert.alert("Error", "Ingredients can't be empty.")
+      return
+    }
+
+    // Check if we're editing a loaded recipe
+    if (loadedRecipeIdRef.current) {
+      // Ask user if they want to update the existing recipe or create a new one
+      Alert.alert("Save Recipe", `Do you want to save changes to "${recipeName}"?`, [
+        {
+          text: "New Recipe",
+          onPress: () => {
+            // Show the modal to enter a new name
+            setIsNewRecipeModalVisible(true)
+          },
+        },
+        {
+          text: "Update",
+          onPress: () => {
+            // Include tempRatio when updating the recipe
+            updateExistingRecipe()
+          },
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ])
+    } else {
+      // No loaded recipe, create a new one with the current ratio
+      createNewRecipe()
+    }
+  }
+
+  // Replace multiple useEffects with a single, comprehensive one
+  useEffect(() => {
+    if (route.params) {
+      console.log("📥 Received in FoodInputScreen:", route.params)
+
+      // Handle ingredients
+      if (route.params.ingredients) {
+        const updatedIngredients = route.params.ingredients.map((ing) => ({
+          ...ing,
+          unit: ing.unit || globalUnit,
+          meatWeight: ing.meatWeight ?? 0,
+          boneWeight: ing.boneWeight ?? 0,
+          organWeight: ing.organWeight ?? 0,
+          plantMatterWeight: ing.plantMatterWeight ?? 0,
+          totalWeight: ing.totalWeight ?? 0,
+        }))
+        setIngredients(updatedIngredients)
+        calculateTotals(updatedIngredients)
+      }
+
+      // Handle recipe name
+      if (route.params.recipeName) {
+        setRecipeName(route.params.recipeName)
+      }
+
+      // Handle ratio
+      if (route.params.ratio) {
+        const { meat, bone, organ, plantMatter, selectedRatio } = route.params.ratio
+        console.log("📥 Loaded ratio in FoodInputScreen:", {
+          meat,
+          bone,
+          organ,
+          plantMatter,
+          selectedRatio,
+        })
+
+        setMeatRatio(meat || 0)
+        setBoneRatio(bone || 0)
+        setOrganRatio(organ || 0)
+        setPlantMatterRatio(plantMatter || 0)
+        setSelectedRatio(selectedRatio || "80:10:10")
+      }
+    }
+  }, [route.params, globalUnit])
 
   const handleDeleteIngredient = (name: string) => {
-    Alert.alert(
-      'Delete Ingredient',
-      `Are you sure you want to delete ${name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', onPress: () => {
-          const updatedIngredients = ingredients.filter(ing => ing.name !== name);
-          setIngredients(updatedIngredients);
-          calculateTotals(updatedIngredients);
-        }}
-      ]
-    );
-  };
+    Alert.alert("Delete Ingredient", `Are you sure you want to delete ${name}?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        onPress: () => {
+          const updatedIngredients = ingredients.filter((ing) => ing.name !== name)
+          setIngredients(updatedIngredients)
+          calculateTotals(updatedIngredients)
+        },
+      },
+    ])
+  }
 
   const handleClearScreen = () => {
-    Alert.alert(
-      'Clear Ingredients',
-      'Are you sure you want to clear all ingredients and the recipe name?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear', onPress: () => {
-            setIngredients([]);
-            setRecipeName('');
-            setTotalMeat(0);
-            setTotalBone(0);
-            setTotalOrgan(0);
-            setTotalWeight(0);
-          }},
-      ]
-    );
-  };
+    Alert.alert("Clear Ingredients", "Are you sure you want to clear all ingredients and the recipe name?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear",
+        onPress: () => {
+          setIngredients([])
+          setRecipeName("")
+          setTotalMeat(0)
+          setTotalBone(0)
+          setTotalOrgan(0)
+          setTotalPlantMatter(0)
+          setTotalWeight(0)
+        },
+      },
+    ])
+  }
 
-  const formatWeight = (weight: number | undefined, weightUnit: 'g' | 'kg' | 'lbs') => {
-    return (weight !== undefined && !isNaN(weight) ? weight.toFixed(2) : '0.00') + ' ' + weightUnit;
-  };
+  // Updated formatWeight function to remove .00 for grams and make unit stick to number
+  const formatWeight = (weight: number | undefined, weightUnit: "g" | "kg" | "lbs") => {
+    if (weight === undefined) weight = 0
+
+    // Format the number based on unit
+    let formattedNumber
+    if (weightUnit === "g") {
+      // For grams, show whole numbers if possible
+      formattedNumber = weight % 1 === 0 ? weight.toFixed(0) : weight.toFixed(2)
+    } else {
+      // For kg and lbs, always show 2 decimal places
+      formattedNumber = weight.toFixed(2)
+    }
+
+    // Return with no space between number and unit
+    return formattedNumber + weightUnit
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
       <View style={styles.container}>
-
-      <View style={styles.topBar}>
-        <Text style={styles.topBarText}>{recipeName ? recipeName : 'Raw Feeding Calc'}</Text>
-      </View>
+        {/* Update the topBar style to white with black text */}
+        <View style={styles.topBar}>
+          <Text style={styles.topBarText}>{recipeName ? recipeName : "Raw Feeding Calc"}</Text>
+        </View>
 
         <View style={styles.totalBar}>
-          <Text style={styles.totalText}>
-            Total: {formatWeight(isNaN(totalWeight) ? 0 : totalWeight, globalUnit)}
-          </Text>
+          <Text style={styles.totalText}>Total: {formatWeight(isNaN(totalWeight) ? 0 : totalWeight, globalUnit)}</Text>
           <Text style={styles.subTotalText}>
-            Meat: {formatWeight(totalMeat, globalUnit)} ({totalWeight > 0 ? (totalMeat / totalWeight * 100).toFixed(2) : 0}%) | 
-            Bone: {formatWeight(totalBone, globalUnit)} ({totalWeight > 0 ? (totalBone / totalWeight * 100).toFixed(2) : 0}%) | 
-            Organ: {formatWeight(totalOrgan, globalUnit)} ({totalWeight > 0 ? (totalOrgan / totalWeight * 100).toFixed(2) : 0}%) | 
-            Plant Matter: {formatWeight(totalPlantMatter, globalUnit)} ({totalWeight > 0 ? (totalPlantMatter / totalWeight * 100).toFixed(2) : 0}%)
+            Meat: {formatWeight(totalMeat, globalUnit)} (
+            {totalWeight > 0 ? ((totalMeat / totalWeight) * 100).toFixed(2) : "0.00"}
+            %) | Bone: {formatWeight(totalBone, globalUnit)} (
+            {totalWeight > 0 ? ((totalBone / totalWeight) * 100).toFixed(2) : "0.00"}
+            %) | Organ: {formatWeight(totalOrgan, globalUnit)} (
+            {totalWeight > 0 ? ((totalOrgan / totalWeight) * 100).toFixed(2) : "0.00"}
+            %) | Plant Matter: {formatWeight(totalPlantMatter, globalUnit)} (
+            {totalWeight > 0 ? ((totalPlantMatter / totalWeight) * 100).toFixed(2) : "0.00"}
+            %)
           </Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContainer}>
-    {ingredients.length === 0 ? (
-      <Text style={styles.noIngredientsText}>No ingredients added yet</Text>
-    ) : (
-      ingredients.map((ingredient, index) => {
-        const isPlantMatter = ingredient.meatWeight === 0 && ingredient.boneWeight === 0 && ingredient.organWeight === 0;
+          {ingredients.length === 0 ? (
+            <Text style={styles.noIngredientsText}>No ingredients added yet</Text>
+          ) : (
+            ingredients.map((ingredient, index) => {
+              const isPlantMatter =
+                ingredient.meatWeight === 0 && ingredient.boneWeight === 0 && ingredient.organWeight === 0
 
-        return (
-          <View
-            key={index}
-            style={isPlantMatter ? styles.plantMatterItem : styles.meatItem}
-          >
-            <View style={styles.ingredientInfo}>
-              <Text style={styles.ingredientText}>{ingredient.name}</Text>
-              {isPlantMatter ? (
-                <>
-                  <Text style={styles.ingredientDetails}>
-                    Type: {ingredient.type || 'N/A'} 
-                  </Text>
-                  <Text style={styles.totalWeightText}>
-                    Total: {formatWeight(ingredient.totalWeight, ingredient.unit)}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.ingredientDetails}>
-                    M: {formatWeight(ingredient.meatWeight, ingredient.unit)}  B: {formatWeight(ingredient.boneWeight, ingredient.unit)}  O: {formatWeight(ingredient.organWeight, ingredient.unit)}
-                  </Text>
-                  <Text style={styles.totalWeightText}>
-                    Total: {formatWeight(ingredient.totalWeight, ingredient.unit)}
-                  </Text>
-                </>
-              )}
-            </View>
-            <View style={styles.iconsContainer}>
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={() =>
-                  navigation.navigate('FoodInfoScreen', {
-                    ingredient: { ...ingredient, unit: ingredient.unit },
-                    editMode: true,
-                  })
-                }
-              >
-                <FontAwesome name="edit" size={24} color="black" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDeleteIngredient(ingredient.name)}
-              >
-                <FontAwesome name="trash" size={24} color="black" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        );
-      })
-    )}
-  </ScrollView>
+              return (
+                <View key={index} style={isPlantMatter ? styles.plantMatterItem : styles.ingredientItem}>
+                  <View style={styles.ingredientInfo}>
+                    <Text style={styles.ingredientText}>{ingredient.name}</Text>
+                    {isPlantMatter ? (
+                      <>
+                        <Text style={styles.detailsText}>Type: {ingredient.type || "N/A"}</Text>
+                        <Text style={styles.totalWeightText}>
+                          Total: {formatWeight(ingredient.totalWeight, ingredient.unit)}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.detailsText}>
+                          M: {formatWeight(ingredient.meatWeight, ingredient.unit)} | B:{" "}
+                          {formatWeight(ingredient.boneWeight, ingredient.unit)} | O:{" "}
+                          {formatWeight(ingredient.organWeight, ingredient.unit)}
+                        </Text>
+                        <Text style={styles.totalWeightText}>
+                          Total: {formatWeight(ingredient.totalWeight, ingredient.unit)}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                  <View style={styles.iconsContainer}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() =>
+                        navigation.navigate("FoodInfoScreen", {
+                          ingredient: { ...ingredient, unit: ingredient.unit },
+                          editMode: true,
+                        })
+                      }
+                    >
+                      <FontAwesome name="edit" size={rs(24)} color="black" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteIngredient(ingredient.name)}
+                    >
+                      <FontAwesome name="trash" size={rs(24)} color="black" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )
+            })
+          )}
+        </ScrollView>
 
-  <Modal
-          transparent={true}
-          visible={isModalVisible}
-          onRequestClose={() => setIsModalVisible(false)}
-        >
+        {/* Original Recipe Name Modal */}
+        <Modal transparent={true} visible={isModalVisible} onRequestClose={() => setIsModalVisible(false)}>
           <View style={styles.modalContainer}>
             <View style={styles.modalBox}>
               <Text style={styles.modalTitle}>Add Recipe</Text>
@@ -414,15 +708,49 @@ useEffect(() => {
                 onChangeText={setRecipeName}
               />
               <View style={styles.modalButtonsContainer}>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={handleSaveRecipe}
-                >
+                <TouchableOpacity style={styles.saveButton} onPress={handleSaveRecipe}>
                   <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setIsModalVisible(false)}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* New Recipe Modal */}
+        <Modal
+          transparent={true}
+          visible={isNewRecipeModalVisible}
+          onRequestClose={() => setIsNewRecipeModalVisible(false)}
+          animationType="fade"
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Create New Recipe</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Recipe Name"
+                value={newRecipeName}
+                onChangeText={setNewRecipeName}
+              />
+              <View style={styles.modalButtonsContainer}>
+                <TouchableOpacity style={styles.saveButton} onPress={createNewRecipe} disabled={isSaving}>
+                  {isSaving ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Create</Text>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.cancelButton}
-                  onPress={() => setIsModalVisible(false)}
+                  onPress={() => {
+                    setIsNewRecipeModalVisible(false)
+                    if (route.params?.recipeId) {
+                      setIsSaveOptionsModalVisible(true)
+                    }
+                  }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
@@ -431,314 +759,293 @@ useEffect(() => {
           </View>
         </Modal>
 
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={handleClearScreen}>
-          <Text style={styles.clearButtonText}>Clear</Text>
-        </TouchableOpacity>
-
         <View style={styles.calculateButtonContainer}>
-        <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.ingredientButton}
-          onPress={() => navigation.navigate('SearchScreen')}>
-          <Text style={styles.ingredientButtonText}>Add Ingredients</Text>
-        </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.ingredientButton} onPress={() => navigation.navigate("SearchScreen")}>
+              <Text style={styles.ingredientButtonText}>Add Ingredients</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.saveRecipeButton, isSaving && { backgroundColor: 'grey' }]}
-          onPress={handleSaveRecipe}
-          disabled={isSaving}>
-          {isSaving ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.saveButtonText}>Save Recipe</Text>
-          )}
-        </TouchableOpacity>
-        </View>
-          
-        <TouchableOpacity
-          style={styles.calculateButton}
-          onPress={() =>
-            navigation.navigate('CalculatorScreen', {
-              meat: totalMeat,
-              bone: totalBone,
-              organ: totalOrgan,
-              plantmatter: totalPlantMatter,
-              selectedRatio: selectedRatio,
-            })
-          }>
-          <Text style={styles.calculateButtonText}>Select Ratio & Calculate</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveRecipeButton, isSaving && { backgroundColor: "grey" }]}
+              onPress={handleSaveRecipe}
+              disabled={isSaving}
+            >
+              {isSaving ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Save Recipe</Text>}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.calculateButton}
+              onPress={() =>
+                navigation.navigate("CalculatorScreen", {
+                  meat: totalMeat,
+                  bone: totalBone,
+                  organ: totalOrgan,
+                  plantmatter: totalPlantMatter,
+                  selectedRatio: selectedRatio,
+                })
+              }
+            >
+              <Text style={styles.calculateButtonText}>Ratio / Calculate</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.clearButton} onPress={handleClearScreen}>
+              <Text style={styles.clearButtonText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </SafeAreaView>
-  );
-};
+  )
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   container: {
     flex: 1,
-    backgroundColor: 'transparent', // Ensure the parent container has a transparent background
+    justifyContent: "flex-start",
   },
   topBar: {
-    backgroundColor: '#000080',
-    paddingVertical: 25,
-    alignItems: 'center',
+    backgroundColor: "white",
+    paddingVertical: Platform.OS === "ios" ? vs(isSmallDevice ? 7 : 15) : vs(isSmallDevice ? 8 : 12),
+    alignItems: "center",
+    marginTop: Platform.OS === "ios" ? (isSmallDevice ? 5 : -10) : isSmallDevice ? 8 : 12,
+    marginBottom: Platform.OS === "ios" ? (isSmallDevice ? 5 : -6) : isSmallDevice ? -4 : -8,
   },
   topBarText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: rs(isSmallDevice ? 20 : 22),
+    fontWeight: "600",
+    color: "black",
   },
   totalBar: {
-    padding: 10,
+    padding: rs(isSmallDevice ? 5 : 8),
     borderBottomWidth: 1,
-    borderBottomColor: '#ded8d7',
-    backgroundColor: 'white',
+    borderBottomColor: "#ded8d7",
+    backgroundColor: "white",
+    marginTop: vs(isSmallDevice ? -12 : -10),
   },
   totalText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'black',
+    fontSize: rs(isSmallDevice ? 16 : 18),
+    fontWeight: "bold",
+    color: "black",
   },
   subTotalText: {
-    fontSize: 16,
-    color: 'black',
+    fontSize: rs(isSmallDevice ? 12 : 14),
+    color: "black",
   },
   scrollContainer: {
-    padding: 10,
-    paddingBottom: 5, // Extra space for bottom navigation bar
+    padding: rs(8),
+    paddingBottom: vs(5),
   },
   noIngredientsText: {
-    fontSize: 18,
-    color: 'gray',
-    textAlign: 'center',
-    marginTop: 50,
+    fontSize: rs(isSmallDevice ? 14 : 16),
+    color: "gray",
+    textAlign: "center",
+    marginTop: vs(40),
   },
-  meatItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: '#f5f5f5',
+  ingredientItem: {
+    padding: rs(6),
+    backgroundColor: "#f5f5f5",
     borderRadius: 5,
-    borderColor: '#cfcfcf',
-    borderWidth: 1,
+    marginBottom: vs(10),
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   plantMatterItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: '#e0ffe0', // Light green background for Plant Matter
+    padding: rs(6),
+    backgroundColor: "#e0ffe0", // Light green background for Plant Matter
     borderRadius: 5,
-    borderColor: '#8fbc8f', // Darker green border
+    marginBottom: vs(10),
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderColor: "#8fbc8f", // Darker green border
     borderWidth: 1,
   },
   ingredientInfo: {
     flex: 1,
   },
   ingredientText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'black',
+    fontSize: rs(isSmallDevice ? 16 : 18),
+    fontWeight: "bold",
+    color: "black",
+    marginRight: rs(10),
   },
-  ingredientDetails: {
-    fontSize: 16,
-    color: '#404040',
-    marginVertical: 5,
+  detailsText: {
+    fontSize: rs(isSmallDevice ? 14 : 16),
+    color: "#404040",
+    flex: 1,
   },
   totalWeightText: {
-    fontSize: 16,
-    color: '#404040',
+    fontSize: rs(isSmallDevice ? 14 : 16),
+    color: "#404040",
   },
   iconsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 10,
+    flexDirection: "row",
+    alignItems: "center",
   },
   editButton: {
-    marginRight: 20,
+    marginRight: rs(8),
   },
   deleteButton: {
-    padding: 5,
+    marginLeft: rs(4),
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background to focus on the modal
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalBox: {
-    width: '80%',
-    backgroundColor: 'white',
-    padding: 20,
+    width: "80%",
+    backgroundColor: "white",
+    padding: rs(16),
     borderRadius: 10,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 5, // Shadow for Android
+    elevation: 5,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
+    fontSize: rs(isSmallDevice ? 16 : 18),
+    fontWeight: "bold",
+    marginBottom: vs(12),
+    textAlign: "center",
+  },
+  modalText: {
+    fontSize: rs(isSmallDevice ? 14 : 16),
+    marginBottom: vs(20),
+    textAlign: "center",
   },
   input: {
-    height: 40,
-    borderColor: 'gray',
+    height: Platform.OS === "ios" ? vs(40) : vs(isSmallDevice ? 50 : 40),
+    borderColor: "gray",
     borderWidth: 1,
-    width: '100%',
-    paddingHorizontal: 10,
-    marginBottom: 20,
+    width: "100%",
+    paddingHorizontal: rs(10),
+    marginBottom: vs(16),
     borderRadius: 5,
+    fontSize: Platform.OS === "ios" ? rs(isSmallDevice ? 14 : 16) : rs(isSmallDevice ? 12 : 14),
   },
   modalButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
   saveButton: {
-    backgroundColor: '#000080',
+    backgroundColor: "#000080",
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: vs(8),
     borderRadius: 5,
-    alignItems: 'center',
-    marginRight: 5,
+    alignItems: "center",
+    marginRight: rs(5),
   },
   cancelButton: {
-    backgroundColor: 'grey',
+    backgroundColor: "grey",
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: vs(8),
     borderRadius: 5,
-    alignItems: 'center',
-    marginLeft: 5,
+    alignItems: "center",
+    marginLeft: rs(5),
   },
   saveButtonText: {
-    color: 'white',
-    fontSize: 16,
+    color: "white",
+    fontSize: rs(isSmallDevice ? 14 : 16),
+    fontWeight: "bold",
   },
   cancelButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: "white",
+    fontWeight: "bold",
+    fontSize: rs(isSmallDevice ? 12 : 14),
   },
-  addNewRecipeButton: {
-    backgroundColor: '#000080',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    alignItems: 'center',
-  },
-  addNewRecipeButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  noIngredientsText: {
-    fontSize: 18,
-    color: 'gray',
-    textAlign: 'center',
-    marginTop: 50,
-  },
-  clearButton: {
-    position: 'absolute',
-    bottom: 150,
-    left: '50%',
-    transform: [{ translateX: -40 }],
-    backgroundColor: '#FF3D00', 
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  clearButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  saveOptionsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginTop: vs(10),
   },
   calculateButtonContainer: {
-    padding: 15,
+    padding: Platform.OS === "ios" ? 10 : rs(isSmallDevice ? 6 : 10),
+    paddingTop: Platform.OS === "ios" ? 8 : rs(isSmallDevice ? 7 : 8),
+    paddingBottom: Platform.OS === "ios" ? 3 : rs(isSmallDevice ? 4 : 4),
     borderTopWidth: 0.7,
-    borderTopColor: '#ded8d7',
-    backgroundColor: 'white',
+    borderTopColor: "#ded8d7",
+    backgroundColor: "white",
   },
   buttonRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
+    flexDirection: "row",
+    marginBottom: Platform.OS === "ios" ? 4 : vs(isSmallDevice ? 2 : 4),
   },
   ingredientButton: {
     flex: 1,
-    backgroundColor: '#000080',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    backgroundColor: "#000080",
+    paddingVertical: vs(isSmallDevice ? 8 : 10),
+    paddingHorizontal: rs(10),
     borderRadius: 10,
-    marginRight: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginRight: rs(5),
+    alignItems: "center",
+    justifyContent: "center",
   },
   saveRecipeButton: {
     flex: 1,
-    backgroundColor: '#000080',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    backgroundColor: "#000080",
+    paddingVertical: vs(isSmallDevice ? 8 : 10),
+    paddingHorizontal: rs(10),
     borderRadius: 10,
-    marginLeft: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginLeft: rs(5),
+    alignItems: "center",
+    justifyContent: "center",
   },
   ingredientButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: "white",
+    fontSize: rs(isSmallDevice ? 14 : 16),
+    fontWeight: "bold",
   },
   calculateButton: {
-    backgroundColor: '#000080',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    flex: 1,
+    backgroundColor: "#000080",
+    paddingVertical: vs(isSmallDevice ? 8 : 10),
+    paddingHorizontal: rs(10),
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginRight: rs(5),
+    alignItems: "center",
+    justifyContent: "center",
   },
   calculateButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: "white",
+    fontSize: rs(isSmallDevice ? 14 : 16),
+    fontWeight: "bold",
   },
-  bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#000080',
-    paddingVertical: 5,
+  clearButton: {
+    flex: 1,
+    backgroundColor: "#000080",
+    paddingVertical: vs(isSmallDevice ? 8 : 10),
+    paddingHorizontal: rs(10),
+    borderRadius: 10,
+    marginLeft: rs(5),
+    alignItems: "center",
+    justifyContent: "center",
   },
-  bottomBarItem: {
-    alignItems: 'center',
+  clearButtonText: {
+    color: "white",
+    fontSize: rs(isSmallDevice ? 14 : 16),
+    fontWeight: "bold",
+  },
+  textButtonBlue: {
+    color: "#000080",
+    fontSize: rs(isSmallDevice ? 16 : 18),
+    fontWeight: "bold",
+    paddingHorizontal: rs(15),
+    paddingVertical: vs(10),
+  },
+})
 
-  },
-  bottomBarText: {
-    fontSize: 14,
-    color: 'white',
-    fontWeight: 'bold',
-    marginTop: 1,
-  },
-});
+export default FoodInputScreen
 
-export default FoodInputScreen;
