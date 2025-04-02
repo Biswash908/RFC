@@ -1,7 +1,7 @@
 "use client"
 
-import React from "react"
-import { useState, useEffect } from "react"
+import type React from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   View,
   Text,
@@ -15,10 +15,10 @@ import {
   StatusBar,
   Platform,
   Dimensions,
+  ActivityIndicator,
 } from "react-native"
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { ActivityIndicator } from "react-native"
 import { FontAwesome } from "@expo/vector-icons"
 import { useUnit } from "../UnitContext"
 import { v4 as uuidv4 } from "uuid"
@@ -55,10 +55,17 @@ export type RootStackParamList = {
     recipeId: string
     recipeName: string
     ingredients: Ingredient[]
+    ratio?: any
   }
   FoodInfoScreen: { ingredient: Ingredient; editMode: boolean }
   SearchScreen: undefined
-  CalculatorScreen: { meat: number; bone: number; organ: number }
+  CalculatorScreen: {
+    meat: number
+    bone: number
+    organ: number
+    plantmatter: number
+    ratio?: any
+  }
 }
 
 type FoodInputScreenRouteProp = RouteProp<RootStackParamList, "FoodInputScreen">
@@ -82,16 +89,24 @@ const FoodInputScreen: React.FC = () => {
   const [newRecipeName, setNewRecipeName] = useState("")
   const [isSaving, setIsSaving] = useState(false)
 
-  const [newMeat, setNewMeat] = useState<number>(0)
-  const [newBone, setNewBone] = useState<number>(0)
-  const [newOrgan, setNewOrgan] = useState<number>(0)
-  const [newPlantMatter, setNewPlantMatter] = useState<number>(0) // For plant matter
+  const [newMeat, setNewMeat] = useState<number>(80)
+  const [newBone, setNewBone] = useState<number>(10)
+  const [newOrgan, setNewOrgan] = useState<number>(10)
+  const [newPlantMatter, setNewPlantMatter] = useState<number>(0)
 
-  const [meatRatio, setMeatRatio] = useState(0)
-  const [boneRatio, setBoneRatio] = useState(0)
-  const [organRatio, setOrganRatio] = useState(0)
-  const [plantMatterRatio, setPlantMatterRatio] = useState(0) // For plant matter
+  const [meatRatio, setMeatRatio] = useState(80)
+  const [boneRatio, setBoneRatio] = useState(10)
+  const [organRatio, setOrganRatio] = useState(10)
+  const [plantMatterRatio, setPlantMatterRatio] = useState(0)
   const [selectedRatio, setSelectedRatio] = useState<string>("80:10:10")
+  const [includePlantMatter, setIncludePlantMatter] = useState(false)
+
+  // Add refs to track loaded recipe and original state for change detection
+  const loadedRecipeIdRef = useRef<string | null>(null)
+  const originalIngredientsRef = useRef<Ingredient[]>([])
+  const originalRatioRef = useRef<any>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const selectedRatioRef = useRef<string | null>(null)
 
   useEffect(() => {
     const newIngredient = route.params?.updatedIngredient
@@ -114,53 +129,70 @@ const FoodInputScreen: React.FC = () => {
 
       setIngredients(updatedIngredients)
       calculateTotals(updatedIngredients)
-    }
-  }, [route.params?.updatedIngredient])
 
+      // Mark as having unsaved changes
+      setHasUnsavedChanges(true)
+      AsyncStorage.setItem("hasUnsavedChanges", "true")
+    }
+  }, [route.params?.updatedIngredient, globalUnit])
+
+  // Handle ratio updates from CalculatorScreen
   useEffect(() => {
     if (route.params?.ratio) {
-      const { meat, bone, organ, plantMatter, selectedRatio } = route.params.ratio
+      const { meat, bone, organ, plantMatter, selectedRatio, includePlantMatter: includeP } = route.params.ratio
 
-      console.log("📥 Received ratio in FoodInputScreen from CS:", {
+      console.log("📥 Received ratio in FoodInputScreen:", {
         meat,
         bone,
         organ,
         plantMatter,
         selectedRatio,
+        includeP,
       })
 
+      // Update ratio state
       setMeatRatio(meat)
       setBoneRatio(bone)
       setOrganRatio(organ)
-
-      // ✅ Only set plant matter if it exists (avoids potential errors)
-      if (plantMatter !== undefined) {
-        setPlantMatterRatio(plantMatter)
-      }
-
+      setPlantMatterRatio(plantMatter || 0)
       setSelectedRatio(selectedRatio)
+      setIncludePlantMatter(includeP || plantMatter > 0)
+
+      // Update the newRatio values for calculations
+      setNewMeat(meat)
+      setNewBone(bone)
+      setNewOrgan(organ)
+      setNewPlantMatter(plantMatter || 0)
+
+      // Store the latest selected ratio for reference
+      selectedRatioRef.current = selectedRatio
+
+      // Save temporary ratio values to AsyncStorage
+      const saveTemporaryRatio = async () => {
+        try {
+          await AsyncStorage.multiSet([
+            ["tempMeatRatio", meat.toString()],
+            ["tempBoneRatio", bone.toString()],
+            ["tempOrganRatio", organ.toString()],
+            ["tempPlantMatterRatio", (plantMatter || "0").toString()],
+            ["tempSelectedRatio", selectedRatio],
+            ["tempIncludePlantMatter", (includeP || plantMatter > 0).toString()],
+            ["tempRatioModified", "true"],
+          ])
+          console.log("✅ Saved temporary ratio values to AsyncStorage")
+        } catch (error) {
+          console.error("❌ Failed to save temporary ratio values:", error)
+        }
+      }
+      saveTemporaryRatio()
+
+      // Mark as having unsaved changes if this is a temporary ratio
+      if (route.params.ratio.isTemporary) {
+        setHasUnsavedChanges(true)
+        AsyncStorage.setItem("hasUnsavedChanges", "true")
+      }
     }
   }, [route.params?.ratio])
-
-  useEffect(() => {
-    const newIngredient = route.params?.updatedIngredient
-    if (newIngredient && newIngredient.name) {
-      newIngredient.unit = newIngredient.unit || globalUnit
-      newIngredient.meatWeight = newIngredient.meatWeight ?? 0
-      newIngredient.boneWeight = newIngredient.boneWeight ?? 0
-      newIngredient.organWeight = newIngredient.organWeight ?? 0
-      newIngredient.plantMatterWeight = newIngredient.plantMatterWeight ?? 0
-
-      const existingIngredientIndex = ingredients.findIndex((ing) => ing.name === newIngredient.name)
-      const updatedIngredients =
-        existingIngredientIndex !== -1
-          ? ingredients.map((ing, index) => (index === existingIngredientIndex ? newIngredient : ing))
-          : [...ingredients, newIngredient]
-
-      setIngredients(updatedIngredients)
-      calculateTotals(updatedIngredients)
-    }
-  }, [route.params?.updatedIngredient])
 
   const convertToUnit = (weight: number, fromUnit: "g" | "kg" | "lbs", toUnit: "g" | "kg" | "lbs") => {
     if (fromUnit === toUnit) return weight
@@ -196,13 +228,14 @@ const FoodInputScreen: React.FC = () => {
     )
 
     // Correctly sum all plant matter (fruits, vegetables, nuts)
-    const plantMatterWeight = updatedIngredients.reduce(
-      (sum, ing) =>
-        ing.type === "Fruit" || ing.type === "Vegetable" || ing.type === "Nut & Seed"
-          ? sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit)
-          : sum,
-      0,
-    )
+    const plantMatterWeight = updatedIngredients.reduce((sum, ing) => {
+      if (ing.type === "Fruit" || ing.type === "Vegetable" || ing.type === "Nut & Seed") {
+        return sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit)
+      } else if (ing.plantMatterWeight) {
+        return sum + convertToUnit(ing.plantMatterWeight, ing.unit, globalUnit)
+      }
+      return sum
+    }, 0)
 
     setTotalWeight(totalWt)
     setTotalMeat(meatWeight)
@@ -218,14 +251,14 @@ const FoodInputScreen: React.FC = () => {
       const customBoneRatio = await AsyncStorage.getItem("customBoneRatio")
       const customOrganRatio = await AsyncStorage.getItem("customOrganRatio")
       const customPlantMatterRatio = await AsyncStorage.getItem("customPlantMatterRatio")
-      const includePlantMatter = await AsyncStorage.getItem("includePlantMatter")
+      const customIncludePlantMatter = await AsyncStorage.getItem("customIncludePlantMatter")
 
       return {
         meat: Number(customMeatRatio || "0"),
         bone: Number(customBoneRatio || "0"),
         organ: Number(customOrganRatio || "0"),
         plantMatter: Number(customPlantMatterRatio || "0"),
-        includePlantMatter: includePlantMatter === "true",
+        includePlantMatter: customIncludePlantMatter === "true",
       }
     } catch (error) {
       console.error("Failed to load custom ratio:", error)
@@ -259,9 +292,9 @@ const FoodInputScreen: React.FC = () => {
       }
 
       return {
-        meat: Number(meatRatio || "0"),
-        bone: Number(boneRatio || "0"),
-        organ: Number(organRatio || "0"),
+        meat: Number(meatRatio || "80"),
+        bone: Number(boneRatio || "10"),
+        organ: Number(organRatio || "10"),
         plantMatter: Number(plantMatterRatio || "0"),
         selectedRatio: selectedRatio || "80:10:10",
         includePlantMatter: includePlantMatter === "true",
@@ -315,7 +348,7 @@ const FoodInputScreen: React.FC = () => {
     try {
       const storedRecipes = await AsyncStorage.getItem("recipes")
       const parsedRecipes = storedRecipes ? JSON.parse(storedRecipes) : []
-      const currentRecipeId = await AsyncStorage.getItem("currentRecipeId")
+      const currentRecipeId = loadedRecipeIdRef.current
 
       if (!currentRecipeId) {
         Alert.alert("Error", "No recipe selected to update.")
@@ -326,15 +359,19 @@ const FoodInputScreen: React.FC = () => {
       const tempMeatRatio = (await AsyncStorage.getItem("tempMeatRatio")) || newMeat.toString()
       const tempBoneRatio = (await AsyncStorage.getItem("tempBoneRatio")) || newBone.toString()
       const tempOrganRatio = (await AsyncStorage.getItem("tempOrganRatio")) || newOrgan.toString()
+      const tempPlantMatterRatio = (await AsyncStorage.getItem("tempPlantMatterRatio")) || newPlantMatter.toString()
       const tempSelectedRatio = (await AsyncStorage.getItem("tempSelectedRatio")) || selectedRatio
+      const tempIncludePlantMatter =
+        (await AsyncStorage.getItem("tempIncludePlantMatter")) || includePlantMatter.toString()
 
       // Create the updated ratio object using the temporary values
       const ratioObject = {
         meat: Number(tempMeatRatio),
         bone: Number(tempBoneRatio),
         organ: Number(tempOrganRatio),
-        plantMatter: newPlantMatter,
+        plantMatter: Number(tempPlantMatterRatio),
         selectedRatio: tempSelectedRatio,
+        includePlantMatter: tempIncludePlantMatter === "true",
         isUserDefined: true,
       }
 
@@ -367,6 +404,19 @@ const FoodInputScreen: React.FC = () => {
               unit: ing.unit,
               type: ing.type || null,
             })),
+            // Save the ratio object for future reference
+            savedRatio: ratioObject,
+            // If this is a custom ratio, also save it separately
+            savedCustomRatio:
+              ratioObject.selectedRatio === "custom"
+                ? {
+                    meat: ratioObject.meat,
+                    bone: ratioObject.bone,
+                    organ: ratioObject.organ,
+                    plantMatter: ratioObject.plantMatter,
+                    includePlantMatter: ratioObject.includePlantMatter,
+                  }
+                : undefined,
           }
         }
         return recipe
@@ -377,9 +427,13 @@ const FoodInputScreen: React.FC = () => {
       // Save the current ratio to the recipe
       await saveCurrentRatioToRecipe(currentRecipeId)
 
-      Alert.alert("Success", `Recipe "${recipeName}" updated successfully!`)
+      // Show success alert
+      Alert.alert("Success", `Recipe "${recipeName}" updated successfully!`, [{ text: "OK" }])
+
+      // Reset unsaved changes flag
       setHasUnsavedChanges(false)
       await AsyncStorage.setItem("hasUnsavedChanges", "false")
+
       // Store the updated state as the new original state
       originalIngredientsRef.current = JSON.parse(JSON.stringify(ingredients))
       originalRatioRef.current = ratioObject
@@ -423,6 +477,25 @@ const FoodInputScreen: React.FC = () => {
       // Get the current ratio values
       const ratioData = await getCurrentRatioValues()
 
+      // Get temporary ratio values if they exist
+      const tempMeatRatio = await AsyncStorage.getItem("tempMeatRatio")
+      const tempBoneRatio = await AsyncStorage.getItem("tempBoneRatio")
+      const tempOrganRatio = await AsyncStorage.getItem("tempOrganRatio")
+      const tempPlantMatterRatio = await AsyncStorage.getItem("tempPlantMatterRatio")
+      const tempSelectedRatio = await AsyncStorage.getItem("tempSelectedRatio")
+      const tempIncludePlantMatter = await AsyncStorage.getItem("tempIncludePlantMatter")
+
+      // Use temporary values if they exist, otherwise use the current values
+      const ratioObject = {
+        meat: Number(tempMeatRatio || ratioData.meat),
+        bone: Number(tempBoneRatio || ratioData.bone),
+        organ: Number(tempOrganRatio || ratioData.organ),
+        plantMatter: Number(tempPlantMatterRatio || ratioData.plantMatter),
+        selectedRatio: tempSelectedRatio || ratioData.selectedRatio,
+        includePlantMatter: tempIncludePlantMatter === "true" || ratioData.includePlantMatter,
+        isUserDefined: true,
+      }
+
       // Create a new recipe
       const newRecipe = {
         id: uuidv4(),
@@ -433,11 +506,11 @@ const FoodInputScreen: React.FC = () => {
         totalPlantMatter,
         totalWeight,
         ratio:
-          ratioData?.selectedRatio === "custom"
-            ? `${ratioData.meat}:${ratioData.bone}:${ratioData.organ}${
-                ratioData.plantMatter > 0 ? `:${ratioData.plantMatter}` : ""
+          ratioObject.selectedRatio === "custom"
+            ? `${ratioObject.meat}:${ratioObject.bone}:${ratioObject.organ}${
+                ratioObject.plantMatter > 0 ? `:${ratioObject.plantMatter}` : ""
               }`
-            : ratioData?.selectedRatio || "80:10:10",
+            : ratioObject.selectedRatio || "80:10:10",
         ingredients: ingredients.map((ing) => ({
           name: ing.name,
           meatWeight: ing.meatWeight,
@@ -448,6 +521,19 @@ const FoodInputScreen: React.FC = () => {
           unit: ing.unit,
           type: ing.type || null,
         })),
+        // Save the ratio object for future reference
+        savedRatio: ratioObject,
+        // If this is a custom ratio, also save it separately
+        savedCustomRatio:
+          ratioObject.selectedRatio === "custom"
+            ? {
+                meat: ratioObject.meat,
+                bone: ratioObject.bone,
+                organ: ratioObject.organ,
+                plantMatter: ratioObject.plantMatter,
+                includePlantMatter: ratioObject.includePlantMatter,
+              }
+            : undefined,
       }
 
       const updatedRecipes = [...parsedRecipes, newRecipe]
@@ -457,15 +543,27 @@ const FoodInputScreen: React.FC = () => {
       await saveCurrentRatioToRecipe(newRecipe.id)
 
       // Update the current recipe ID to the new recipe
+      loadedRecipeIdRef.current = newRecipe.id
       await AsyncStorage.setItem("currentRecipeId", newRecipe.id)
 
       // Update the recipe name in the UI
       setRecipeName(uniqueRecipeName)
 
-      Alert.alert("Success", `New recipe "${uniqueRecipeName}" created successfully!`)
+      // Show success alert
+      Alert.alert("Success", `New recipe "${uniqueRecipeName}" created successfully!`, [{ text: "OK" }])
+
+      // Close modals
       setIsNewRecipeModalVisible(false)
       setIsSaveOptionsModalVisible(false)
       setNewRecipeName("")
+
+      // Reset unsaved changes flag
+      setHasUnsavedChanges(false)
+      await AsyncStorage.setItem("hasUnsavedChanges", "false")
+
+      // Store the updated state as the new original state
+      originalIngredientsRef.current = JSON.parse(JSON.stringify(ingredients))
+      originalRatioRef.current = ratioObject
     } catch (error) {
       Alert.alert("Error", "Failed to create the new recipe.")
       console.error("Failed to create new recipe", error)
@@ -473,11 +571,6 @@ const FoodInputScreen: React.FC = () => {
       setIsSaving(false)
     }
   }
-
-  const loadedRecipeIdRef = React.useRef<string | null>(null)
-  const originalIngredientsRef = React.useRef<Ingredient[]>([])
-  const originalRatioRef = React.useRef<any>(null)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   // Modify the handleSaveRecipe function to show the save options modal
   const handleSaveRecipe = async () => {
@@ -516,7 +609,7 @@ const FoodInputScreen: React.FC = () => {
       ])
     } else {
       // No loaded recipe, create a new one with the current ratio
-      createNewRecipe()
+      setIsModalVisible(true) // Show modal to add recipe name
     }
   }
 
@@ -538,6 +631,9 @@ const FoodInputScreen: React.FC = () => {
         }))
         setIngredients(updatedIngredients)
         calculateTotals(updatedIngredients)
+
+        // Store original ingredients for change detection
+        originalIngredientsRef.current = JSON.parse(JSON.stringify(updatedIngredients))
       }
 
       // Handle recipe name
@@ -545,25 +641,98 @@ const FoodInputScreen: React.FC = () => {
         setRecipeName(route.params.recipeName)
       }
 
+      // Handle recipe ID
+      if (route.params.recipeId) {
+        loadedRecipeIdRef.current = route.params.recipeId
+        AsyncStorage.setItem("currentRecipeId", route.params.recipeId)
+      }
+
       // Handle ratio
       if (route.params.ratio) {
-        const { meat, bone, organ, plantMatter, selectedRatio } = route.params.ratio
+        const { meat, bone, organ, plantMatter, selectedRatio, includePlantMatter: includeP } = route.params.ratio
         console.log("📥 Loaded ratio in FoodInputScreen:", {
           meat,
           bone,
           organ,
           plantMatter,
           selectedRatio,
+          includeP,
         })
 
-        setMeatRatio(meat || 0)
-        setBoneRatio(bone || 0)
-        setOrganRatio(organ || 0)
+        setMeatRatio(meat || 80)
+        setBoneRatio(bone || 10)
+        setOrganRatio(organ || 10)
         setPlantMatterRatio(plantMatter || 0)
         setSelectedRatio(selectedRatio || "80:10:10")
+        setIncludePlantMatter(includeP || plantMatter > 0)
+
+        // Update the newRatio values for calculations
+        setNewMeat(meat || 80)
+        setNewBone(bone || 10)
+        setNewOrgan(organ || 10)
+        setNewPlantMatter(plantMatter || 0)
+
+        // Store original ratio for change detection
+        originalRatioRef.current = {
+          meat: meat || 80,
+          bone: bone || 10,
+          organ: organ || 10,
+          plantMatter: plantMatter || 0,
+          selectedRatio: selectedRatio || "80:10:10",
+          includePlantMatter: includeP || plantMatter > 0,
+        }
+      }
+
+      // Handle saveChangesFirst flag
+      if (route.params.saveChangesFirst && hasUnsavedChanges) {
+        handleSaveRecipe()
       }
     }
   }, [route.params, globalUnit])
+
+  // Add a function to check for unsaved changes
+  const checkForChanges = () => {
+    // Check if ingredients have changed
+    if (originalIngredientsRef.current.length !== ingredients.length) {
+      setHasUnsavedChanges(true)
+      AsyncStorage.setItem("hasUnsavedChanges", "true")
+      return
+    }
+
+    // Check if any ingredient details have changed
+    const ingredientsChanged = ingredients.some((ingredient, index) => {
+      const original = originalIngredientsRef.current[index]
+      if (!original) return true
+
+      return (
+        ingredient.name !== original.name ||
+        ingredient.meatWeight !== original.meatWeight ||
+        ingredient.boneWeight !== original.boneWeight ||
+        ingredient.organWeight !== original.organWeight ||
+        ingredient.plantMatterWeight !== original.plantMatterWeight ||
+        ingredient.totalWeight !== original.totalWeight
+      )
+    })
+
+    // Check if ratio has changed
+    const ratioChanged =
+      originalRatioRef.current &&
+      (meatRatio !== originalRatioRef.current.meat ||
+        boneRatio !== originalRatioRef.current.bone ||
+        organRatio !== originalRatioRef.current.organ ||
+        plantMatterRatio !== originalRatioRef.current.plantMatter ||
+        selectedRatio !== originalRatioRef.current.selectedRatio ||
+        includePlantMatter !== originalRatioRef.current.includePlantMatter)
+
+    const hasChanges = ingredientsChanged || ratioChanged
+    setHasUnsavedChanges(hasChanges)
+    AsyncStorage.setItem("hasUnsavedChanges", hasChanges ? "true" : "false")
+  }
+
+  // Add effect to check for changes when ingredients or ratio change
+  useEffect(() => {
+    checkForChanges()
+  }, [ingredients, meatRatio, boneRatio, organRatio, plantMatterRatio, selectedRatio, includePlantMatter])
 
   const handleDeleteIngredient = (name: string) => {
     Alert.alert("Delete Ingredient", `Are you sure you want to delete ${name}?`, [
@@ -574,6 +743,10 @@ const FoodInputScreen: React.FC = () => {
           const updatedIngredients = ingredients.filter((ing) => ing.name !== name)
           setIngredients(updatedIngredients)
           calculateTotals(updatedIngredients)
+
+          // Mark as having unsaved changes
+          setHasUnsavedChanges(true)
+          AsyncStorage.setItem("hasUnsavedChanges", "true")
         },
       },
     ])
@@ -592,6 +765,16 @@ const FoodInputScreen: React.FC = () => {
           setTotalOrgan(0)
           setTotalPlantMatter(0)
           setTotalWeight(0)
+
+          // Reset the loaded recipe ID
+          loadedRecipeIdRef.current = null
+          AsyncStorage.removeItem("currentRecipeId")
+
+          // Reset change tracking
+          setHasUnsavedChanges(false)
+          AsyncStorage.setItem("hasUnsavedChanges", "false")
+          originalIngredientsRef.current = []
+          originalRatioRef.current = null
         },
       },
     ])
@@ -708,7 +891,7 @@ const FoodInputScreen: React.FC = () => {
                 onChangeText={setRecipeName}
               />
               <View style={styles.modalButtonsContainer}>
-                <TouchableOpacity style={styles.saveButton} onPress={handleSaveRecipe}>
+                <TouchableOpacity style={styles.saveButton} onPress={createNewRecipe}>
                   <Text style={styles.saveButtonText}>Save</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelButton} onPress={() => setIsModalVisible(false)}>

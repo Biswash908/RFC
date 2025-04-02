@@ -12,12 +12,24 @@ import {
   Platform,
   Modal,
   Alert,
+  Dimensions,
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useFocusEffect, useNavigation } from "@react-navigation/native"
 import "react-native-get-random-values" // Required for UUID to work in React Native
 import { FontAwesome } from "@expo/vector-icons"
 import { v4 as uuidv4 } from "uuid" // Importing UUID
+
+// Add responsive sizing utilities
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
+const isSmallDevice = SCREEN_WIDTH < 375
+const isIOS = Platform.OS === "ios"
+const scale = SCREEN_WIDTH / 375
+const verticalScale = SCREEN_HEIGHT / 812
+
+// Responsive sizing functions
+const rs = (size: number) => Math.round(size * (isIOS ? Math.min(scale, 1.2) : scale))
+const vs = (size: number) => Math.round(size * (isIOS ? Math.min(verticalScale, 1.2) : verticalScale))
 
 const RecipeScreen = ({ route }) => {
   const navigation = useNavigation()
@@ -88,6 +100,15 @@ const RecipeScreen = ({ route }) => {
         },
       ],
       ratio: "80:10:10", // Default ratio for Beef Mix
+      savedRatio: {
+        meat: 80,
+        bone: 10,
+        organ: 10,
+        plantMatter: 0,
+        selectedRatio: "80:10:10",
+        includePlantMatter: false,
+        isUserDefined: false,
+      },
     },
     {
       id: "default2",
@@ -155,6 +176,15 @@ const RecipeScreen = ({ route }) => {
         },
       ],
       ratio: "75:15:10", // Default ratio for Chicken Delight
+      savedRatio: {
+        meat: 75,
+        bone: 15,
+        organ: 10,
+        plantMatter: 0,
+        selectedRatio: "75:15:10",
+        includePlantMatter: false,
+        isUserDefined: false,
+      },
     },
     {
       id: "default3",
@@ -222,6 +252,75 @@ const RecipeScreen = ({ route }) => {
         },
       ],
       ratio: "65:25:10", // Default ratio for Lamb Feast
+      savedRatio: {
+        meat: 65,
+        bone: 25,
+        organ: 10,
+        plantMatter: 0,
+        selectedRatio: "65:25:10",
+        includePlantMatter: false,
+        isUserDefined: false,
+      },
+    },
+    {
+      id: "default4",
+      name: "Veggie Mix",
+      ingredients: [
+        {
+          id: "v1",
+          name: "Broccoli",
+          totalWeight: 100,
+          meatWeight: 0,
+          boneWeight: 0,
+          organWeight: 0,
+          plantMatterWeight: 100,
+          type: "Vegetable",
+          unit: "g",
+        },
+        {
+          id: "v2",
+          name: "Carrots",
+          totalWeight: 100,
+          meatWeight: 0,
+          boneWeight: 0,
+          organWeight: 0,
+          plantMatterWeight: 100,
+          type: "Vegetable",
+          unit: "g",
+        },
+        {
+          id: "v3",
+          name: "Spinach",
+          totalWeight: 50,
+          meatWeight: 0,
+          boneWeight: 0,
+          organWeight: 0,
+          plantMatterWeight: 50,
+          type: "Vegetable",
+          unit: "g",
+        },
+        {
+          id: "v4",
+          name: "Blueberries",
+          totalWeight: 50,
+          meatWeight: 0,
+          boneWeight: 0,
+          organWeight: 0,
+          plantMatterWeight: 50,
+          type: "Fruit",
+          unit: "g",
+        },
+      ],
+      ratio: "70:10:10:10", // Default ratio with plant matter
+      savedRatio: {
+        meat: 70,
+        bone: 10,
+        organ: 10,
+        plantMatter: 10,
+        selectedRatio: "70:10:10:10",
+        includePlantMatter: true,
+        isUserDefined: false,
+      },
     },
   ]
 
@@ -230,10 +329,6 @@ const RecipeScreen = ({ route }) => {
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [recipeToEdit, setRecipeToEdit] = useState(null)
   const [ingredients, setIngredients] = useState([]) // Declare ingredients
-  const calculateTotals = (ingredients) => {
-    // Dummy function to satisfy the usage in useEffect
-    console.log("Calculating totals with ingredients:", ingredients)
-  }
 
   // Destructure `recipeName` and `recipeId` from route params if provided
   const { recipeName, recipeId } = route?.params || {}
@@ -305,19 +400,40 @@ const RecipeScreen = ({ route }) => {
     }, []),
   )
 
-  const calculateRecipeRatio = (ingredients) => {
+  const calculateRecipeRatio = (recipe) => {
+    // If the recipe has a saved ratio, use that for display
+    if (recipe.savedRatio) {
+      if (recipe.savedRatio.includePlantMatter) {
+        return `${recipe.savedRatio.meat}:${recipe.savedRatio.bone}:${recipe.savedRatio.organ}:${recipe.savedRatio.plantMatter}`
+      } else {
+        return `${recipe.savedRatio.meat}:${recipe.savedRatio.bone}:${recipe.savedRatio.organ}`
+      }
+    }
+
+    // Otherwise calculate from ingredients
+    if (!recipe.ingredients || recipe.ingredients.length === 0) {
+      return "80:10:10" // Default ratio if no ingredients
+    }
+
     let totalMeat = 0
     let totalBone = 0
     let totalOrgan = 0
     let totalPlant = 0
     let totalWeight = 0
 
-    ingredients.forEach((ingredient) => {
-      totalMeat += ingredient.meatWeight
-      totalBone += ingredient.boneWeight
-      totalOrgan += ingredient.organWeight
-      totalPlant += ingredient.plantWeight || 0 // Default to 0 if undefined
-      totalWeight += ingredient.totalWeight
+    recipe.ingredients.forEach((ingredient) => {
+      totalMeat += ingredient.meatWeight || 0
+      totalBone += ingredient.boneWeight || 0
+      totalOrgan += ingredient.organWeight || 0
+
+      // Sum plant matter from both dedicated plant matter ingredients and plantMatterWeight property
+      if (ingredient.type === "Fruit" || ingredient.type === "Vegetable" || ingredient.type === "Nut & Seed") {
+        totalPlant += ingredient.totalWeight || 0
+      } else if (ingredient.plantMatterWeight) {
+        totalPlant += ingredient.plantMatterWeight
+      }
+
+      totalWeight += ingredient.totalWeight || 0
     })
 
     const meatRatio = totalWeight ? Math.round((totalMeat / totalWeight) * 100) : 0
@@ -325,33 +441,11 @@ const RecipeScreen = ({ route }) => {
     const organRatio = totalWeight ? Math.round((totalOrgan / totalWeight) * 100) : 0
     const plantRatio = totalWeight ? Math.round((totalPlant / totalWeight) * 100) : 0
 
-    return `${meatRatio} M : ${boneRatio} B : ${organRatio} O : ${plantRatio} P`
+    // Return formatted ratio string
+    return totalPlant > 0
+      ? `${meatRatio}:${boneRatio}:${organRatio}:${plantRatio}`
+      : `${meatRatio}:${boneRatio}:${organRatio}`
   }
-
-  useEffect(() => {
-    const fetchRecipeData = async () => {
-      try {
-        const { recipeId, ingredients: passedIngredients } = route.params || {} // Ensure route.params is defined
-
-        if (passedIngredients) {
-          setIngredients(passedIngredients)
-          calculateTotals(passedIngredients)
-        } else if (recipeId) {
-          const savedRecipe = await AsyncStorage.getItem(`recipe_${recipeId}`)
-          if (savedRecipe) {
-            const parsedRecipe = JSON.parse(savedRecipe)
-            setIngredients(parsedRecipe.ingredients || [])
-            calculateTotals(parsedRecipe.ingredients || [])
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load recipe", error)
-        Alert.alert("Error", "Failed to load the recipe.")
-      }
-    }
-
-    fetchRecipeData()
-  }, [route.params])
 
   useEffect(() => {
     const saveRecipes = async () => {
@@ -424,7 +518,7 @@ const RecipeScreen = ({ route }) => {
                 await AsyncStorage.setItem("currentRecipeId", recipe.id)
                 console.log(`✅ Set current recipe ID to ${recipe.id}`)
 
-                // Check if there's a saved custom ratio for this recipe
+                // Check if there's a saved ratio for this recipe
                 const savedRecipeRatio = await AsyncStorage.getItem(`recipe_ratio_${recipe.id}`)
                 let ratioObject = {}
 
@@ -441,6 +535,10 @@ const RecipeScreen = ({ route }) => {
                   if (ratioObject.plantMatter > 0 && ratioObject.includePlantMatter === undefined) {
                     ratioObject.includePlantMatter = true
                   }
+                } else if (recipe.savedRatio) {
+                  // Use the recipe's saved ratio object if available
+                  ratioObject = recipe.savedRatio
+                  console.log(`📥 Using recipe's saved ratio object:`, ratioObject)
                 } else if (recipe.ratio && recipe.ratio.includes(":")) {
                   // Otherwise use the recipe's default ratio
                   const ratioParts = recipe.ratio.split(":").map(Number)
@@ -466,6 +564,21 @@ const RecipeScreen = ({ route }) => {
                   }
                 }
 
+                // In the loadRecipe function, ensure the ratio object is properly formatted for custom ratios
+                if (recipe.savedRatio && recipe.savedRatio.selectedRatio === "custom") {
+                  ratioObject = {
+                    meat: recipe.savedRatio.meat,
+                    bone: recipe.savedRatio.bone,
+                    organ: recipe.savedRatio.organ,
+                    plantMatter: recipe.savedRatio.plantMatter || 0,
+                    includePlantMatter: recipe.savedRatio.includePlantMatter || recipe.savedRatio.plantMatter > 0,
+                    selectedRatio: "custom",
+                    isUserDefined: true,
+                  }
+
+                  console.log("📤 Passing custom ratio from RecipeScreen:", ratioObject)
+                }
+
                 // Clear any temporary ratio modification flag
                 await AsyncStorage.removeItem("tempRatioModified")
                 await AsyncStorage.removeItem("hasUnsavedChanges")
@@ -487,6 +600,10 @@ const RecipeScreen = ({ route }) => {
                     ["customBoneRatio", ratioObject.bone.toString()],
                     ["customOrganRatio", ratioObject.organ.toString()],
                     ["customPlantMatterRatio", (ratioObject.plantMatter || 0).toString()],
+                    [
+                      "customIncludePlantMatter",
+                      (ratioObject.plantMatter > 0 || ratioObject.includePlantMatter).toString(),
+                    ],
                   )
                 }
 
@@ -589,6 +706,16 @@ const RecipeScreen = ({ route }) => {
         id: uuidv4(), // Use UUID to generate unique ID
         name: uniqueRecipeName,
         ingredients: [],
+        ratio: "80:10:10", // Default ratio
+        savedRatio: {
+          meat: 80,
+          bone: 10,
+          organ: 10,
+          plantMatter: 0,
+          includePlantMatter: false,
+          selectedRatio: "80:10:10",
+          isUserDefined: true,
+        },
       }
 
       setRecipes([...recipes, newRecipe])
@@ -616,18 +743,14 @@ const RecipeScreen = ({ route }) => {
             >
               <View style={styles.recipeInfo}>
                 <Text style={styles.recipeText}>{recipe.name}</Text>
-                <Text style={styles.ingredientCount}>
-                  {recipe.ratio && recipe.ratio.includes(":")
-                    ? recipe.ratio // ✅ If it's a valid ratio, display it
-                    : "80:10:10"}
-                </Text>
+                <Text style={styles.ingredientCount}>{calculateRecipeRatio(recipe)}</Text>
               </View>
               <View style={styles.iconsContainer}>
                 <TouchableOpacity style={styles.editButton} onPress={() => handleOpenEditModal(recipe)}>
-                  <FontAwesome name="edit" size={24} color="black" />
+                  <FontAwesome name="edit" size={rs(24)} color="black" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteRecipe(recipe.id)}>
-                  <FontAwesome name="trash" size={24} color="black" />
+                  <FontAwesome name="trash" size={rs(24)} color="black" />
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -665,6 +788,15 @@ const RecipeScreen = ({ route }) => {
           </View>
         </View>
       </Modal>
+      <TouchableOpacity
+        style={styles.addNewRecipeButton}
+        onPress={() => {
+          setRecipeToEdit(null)
+          setNewRecipeName("")
+          setIsModalVisible(true)
+        }}
+      >
+      </TouchableOpacity>
     </KeyboardAvoidingView>
   )
 }
@@ -673,9 +805,10 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingHorizontal: 16,
     paddingVertical: 20,
+    paddingBottom: 80, // Add padding to make room for the Add New Recipe button
   },
   noRecipesText: {
-    fontSize: 16,
+    fontSize: rs(isSmallDevice ? 14 : 16),
     textAlign: "center",
     marginTop: 20,
   },
@@ -694,11 +827,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recipeText: {
-    fontSize: 18,
+    fontSize: rs(isSmallDevice ? 16 : 18),
     fontWeight: "500",
   },
   ingredientCount: {
-    fontSize: 14,
+    fontSize: rs(isSmallDevice ? 12 : 14),
     color: "gray",
   },
   iconsContainer: {
@@ -709,27 +842,6 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   deleteButton: {},
-  addButtonContainer: {
-    paddingHorizontal: 25,
-    justifyContent: "center",
-    paddingBottom: 20,
-    borderTopWidth: 0.7,
-    borderTopColor: "#ded8d7",
-  },
-  addNewRecipeButton: {
-    backgroundColor: "#000080",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginBottom: 0,
-    marginTop: 20,
-    alignItems: "center",
-  },
-  addNewRecipeButtonText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
-  },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
@@ -744,17 +856,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: rs(isSmallDevice ? 16 : 18),
     fontWeight: "bold",
     marginBottom: 10,
   },
   modalText: {
-    fontSize: 16,
+    fontSize: rs(isSmallDevice ? 14 : 16),
     marginBottom: 10,
     textAlign: "center",
   },
   input: {
-    height: 40,
+    height: vs(isSmallDevice ? 35 : 40),
     borderColor: "gray",
     borderWidth: 1,
     width: "100%",
@@ -769,25 +881,26 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: "#000080",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: vs(isSmallDevice ? 8 : 10),
+    paddingHorizontal: rs(20),
     borderRadius: 5,
     marginRight: 10,
   },
   saveButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: rs(isSmallDevice ? 14 : 16),
   },
   cancelButton: {
     backgroundColor: "grey",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: vs(isSmallDevice ? 8 : 10),
+    paddingHorizontal: rs(20),
     borderRadius: 5,
   },
   cancelButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: rs(isSmallDevice ? 14 : 16),
   },
 })
 
 export default RecipeScreen
+

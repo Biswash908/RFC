@@ -1,40 +1,44 @@
-import type React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Text, View, Platform, StatusBar } from "react-native";
-import FontAwesome6 from "react-native-vector-icons/FontAwesome6"; // Import FontAwesome6 for icons
-import FoodInputScreen from "./screens/FoodInputScreen";
-import FoodInfoScreen from "./screens/FoodInfoScreen";
-import SearchScreen from "./screens/SearchScreen";
-import CalculatorScreen from "./screens/CalculatorScreen";
-import SettingsScreen from "./screens/SettingsScreen";
-import SupportScreen from "./screens/SupportScreen";
-import FAQScreen from "./screens/FAQScreen";
-import CustomRatioScreen from "./screens/CustomRatioScreen";
-import RawFeedingFAQScreen from "./screens/RawFeedingFAQScreen";
-import InfoAndSupportScreen from "./screens/InfoAndSupportScreen";
-import RecipeScreen from "./screens/RecipeScreen";
-import { UnitProvider } from "./UnitContext";
-import { SaveProvider } from "./SaveContext";
+import type React from "react"
+import { NavigationContainer } from "@react-navigation/native"
+import { createStackNavigator } from "@react-navigation/stack"
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
+import { Text, View, Platform, Dimensions, StatusBar } from "react-native"
+import FontAwesome6 from "react-native-vector-icons/FontAwesome6" // Import FontAwesome6 for icons
+import FoodInputScreen from "./screens/FoodInputScreen"
+import FoodInfoScreen from "./screens/FoodInfoScreen"
+import SearchScreen from "./screens/SearchScreen"
+import CalculatorScreen from "./screens/CalculatorScreen"
+import FAQScreen from "./screens/FAQScreen"
+import CustomRatioScreen from "./screens/CustomRatioScreen"
+import RawFeedingFAQScreen from "./screens/RawFeedingFAQScreen"
+import InfoAndSupportScreen from "./screens/InfoAndSupportScreen"
+import RecipeScreen from "./screens/RecipeScreen"
+import { UnitProvider } from "./UnitContext"
+import { SaveProvider } from "./SaveContext"
 
 // Define the ingredient type
 interface Ingredient {
-  name: string;
+  name: string
   // Add other properties of Ingredient as needed
 }
 
 // Define the stack's parameter list
 export type RootStackParamList = {
-  FoodInputScreen: undefined;
-  FoodInfoScreen: { ingredient: Ingredient; editMode: boolean };
-  SearchScreen: undefined;
-  CalculatorScreen: { meat: number; bone: number; organ: number };
-  FAQScreen: undefined;
-};
+  FoodInputScreen: undefined
+  FoodInfoScreen: { ingredient: Ingredient; editMode: boolean }
+  SearchScreen: undefined
+  CalculatorScreen: { meat: number; bone: number; organ: number }
+  FAQScreen: undefined
+}
 
-const Stack = createStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator<RootStackParamList>()
+const Tab = createBottomTabNavigator()
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
+const isSmallDevice = SCREEN_WIDTH < 375
+const isIOS = Platform.OS === "ios"
+const scale = SCREEN_WIDTH / 375
+const rs = (size: number) => Math.round(size * (isIOS ? Math.min(scale, 1.2) : scale))
 
 const HomeTabs = () => {
   return (
@@ -42,18 +46,18 @@ const HomeTabs = () => {
       initialRouteName="HomeTabsHome"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused }) => {
-          let iconName;
-          let label;
+          let iconName
+          let label
 
           if (route.name === "HomeTabsHome") {
-            iconName = "house"; // FontAwesome6 icon for Home
-            label = "Home";
-          } else if (route.name === "Recipe") {
-            iconName = "book"; // FontAwesome6 icon for Recipes
-            label = "Recipes";
+            iconName = "house"
+            label = "Home"
           } else if (route.name === "InfoAndSupport") {
-            iconName = "gear"; // FontAwesome6 icon for Support
-            label = "Support";
+            iconName = "gear"
+            label = "Support"
+          } else if (route.name === "Recipe") {
+            iconName = "book"
+            label = "Recipes"
           }
 
           return (
@@ -61,24 +65,32 @@ const HomeTabs = () => {
               style={{
                 alignItems: "center",
                 justifyContent: "center",
-                height: 50,
+                height: isIOS ? (isSmallDevice ? 30 : 40) : isSmallDevice ? 40 : 50,
               }}
             >
               <FontAwesome6
                 name={iconName}
-                size={28}
-                color="white"
+                size={isIOS ? (isSmallDevice ? 18 : 24) : isSmallDevice ? 22 : 26} //Bottom nav bar icons
+                color={"white"}
                 style={{ textAlign: "center" }}
               />
-              <Text style={{ color: "white", fontSize: 12 }}>{label}</Text>
+              <Text
+                style={{
+                  color: "white",
+                  fontSize: isIOS ? (isSmallDevice ? 8 : 10) : isSmallDevice ? 10 : 12, //Bottom nav bar text
+                  marginTop: isIOS && isSmallDevice ? 0 : 0,
+                }}
+              >
+                {label}
+              </Text>
             </View>
-          );
+          )
         },
         tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: "#000080",
-          paddingVertical: 5,
-          height: Platform.OS === "ios" ? 70 : 60,
+          paddingVertical: isIOS ? (isSmallDevice ? 0 : 3) : isSmallDevice ? 2 : 5,
+          height: isIOS ? (isSmallDevice ? 40 : 50) : isSmallDevice ? 45 : 55, //Bottom nav bar height
         },
       })}
     >
@@ -90,30 +102,16 @@ const HomeTabs = () => {
           headerTitleAlign: "center",
           headerStyle: {
             backgroundColor: "white",
+            height: isIOS && isSmallDevice ? 60 : undefined,
           },
           headerTitleStyle: {
-            fontSize: 25,
+            fontSize: isIOS ? (isSmallDevice ? 16 : 22) : rs(isSmallDevice ? 18 : 25),
             fontWeight: "600",
             color: "black",
           },
         }}
       />
-      <Tab.Screen
-        name="HomeTabsHome"
-        component={FoodInputScreen}
-        options={{
-          title: "Raw Feeding Calculator",
-          headerTitleAlign: "center",
-          headerStyle: {
-            backgroundColor: "white",
-          },
-          headerTitleStyle: {
-            fontWeight: "bold",
-            color: "black",
-          },
-          headerShown: false, // Keep this as it was in the original
-        }}
-      />
+      <Tab.Screen name="HomeTabsHome" component={FoodInputScreen} options={{ headerShown: false }} />
       <Tab.Screen
         name="Recipe"
         component={RecipeScreen}
@@ -122,17 +120,18 @@ const HomeTabs = () => {
           headerTitleAlign: "center",
           headerStyle: {
             backgroundColor: "white",
+            height: isIOS && isSmallDevice ? 60 : undefined,
           },
           headerTitleStyle: {
-            fontSize: 25,
+            fontSize: isIOS ? (isSmallDevice ? 16 : 22) : rs(isSmallDevice ? 18 : 25),
             fontWeight: "600",
             color: "black",
           },
         }}
       />
     </Tab.Navigator>
-  );
-};
+  )
+}
 
 const App: React.FC = () => {
   return (
@@ -140,18 +139,32 @@ const App: React.FC = () => {
       <SaveProvider>
         <NavigationContainer>
           <StatusBar barStyle="dark-content" backgroundColor="white" />
-          <Stack.Navigator initialRouteName="HomeTabs">
+          <Stack.Navigator
+            initialRouteName="HomeTabs"
+            screenOptions={{
+              headerTitleStyle: {
+                fontSize: isIOS ? (isSmallDevice ? 16 : 20) : rs(isSmallDevice ? 18 : 22),
+                fontWeight: "600",
+                color: "black",
+              },
+              headerTitleAlign: "center",
+              headerStyle: {
+                height: isIOS && isSmallDevice ? 60 : undefined,
+              },
+              // Add this to customize the back button text
+              headerBackTitle: "Back",
+              headerBackTitleVisible: false,
+              // If you want no text, use this instead:
+              // headerBackTitle: " ",
+            }}
+          >
             <Stack.Screen
               name="HomeTabs"
               component={HomeTabs}
               options={{ headerShown: false }}
               initialParams={{ screen: "HomeTabsHome" }}
             />
-            <Stack.Screen
-              name="FoodInfoScreen"
-              component={FoodInfoScreen}
-              options={{ title: "Food Information" }}
-            />
+            <Stack.Screen name="FoodInfoScreen" component={FoodInfoScreen} options={{ title: "Food Information" }} />
             <Stack.Screen
               name="SearchScreen"
               component={SearchScreen}
@@ -162,13 +175,6 @@ const App: React.FC = () => {
               }}
             />
             <Stack.Screen
-              name="CustomRatioScreen"
-              options={{ title: "Custom Ratio" }}
-            >
-              {(props) => <CustomRatioScreen {...props} />}
-            </Stack.Screen>
-            <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
-            <Stack.Screen
               name="CalculatorScreen"
               component={CalculatorScreen}
               options={{
@@ -177,7 +183,10 @@ const App: React.FC = () => {
                 headerBackTitle: "Home",
               }}
             />
-            <Stack.Screen name="SupportScreen" component={SupportScreen} />
+            <Stack.Screen name="CustomRatioScreen" component={CustomRatioScreen} options={{ title: "Custom Ratio" }} />
+            <Stack.Screen name="InfoAndSupportScreen" component={InfoAndSupportScreen} />
+            <Stack.Screen name="RecipeScreen" component={RecipeScreen} />
+
             <Stack.Screen
               name="FAQScreen"
               component={FAQScreen}
@@ -200,7 +209,7 @@ const App: React.FC = () => {
         </NavigationContainer>
       </SaveProvider>
     </UnitProvider>
-  );
-};
+  )
+}
 
-export default App;
+export default App  
