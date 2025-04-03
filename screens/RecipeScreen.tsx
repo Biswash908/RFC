@@ -404,15 +404,21 @@ const RecipeScreen = ({ route }) => {
     // If the recipe has a saved ratio, use that for display
     if (recipe.savedRatio) {
       if (recipe.savedRatio.includePlantMatter) {
-        return `${recipe.savedRatio.meat}:${recipe.savedRatio.bone}:${recipe.savedRatio.organ}:${recipe.savedRatio.plantMatter}`
+        return `${recipe.savedRatio.meat} M : ${recipe.savedRatio.bone} B : ${recipe.savedRatio.organ} O : ${recipe.savedRatio.plantMatter} P`
       } else {
-        return `${recipe.savedRatio.meat}:${recipe.savedRatio.bone}:${recipe.savedRatio.organ}`
+        return `${recipe.savedRatio.meat} M : ${recipe.savedRatio.bone} B : ${recipe.savedRatio.organ} O`
       }
     }
 
-    // Otherwise calculate from ingredients
-    if (!recipe.ingredients || recipe.ingredients.length === 0) {
-      return "80:10:10" // Default ratio if no ingredients
+    const ratioStr = String(recipe.ratio)
+    const parts = ratioStr.split(":")
+
+    if (parts.length === 3) {
+      return `${parts[0]}M:${parts[1]}B:${parts[2]}O`
+    }
+
+    if (parts.length === 4) {
+      return `${parts[0]}M:${parts[1]}B:${parts[2]}O:${parts[3]}P`
     }
 
     let totalMeat = 0
@@ -443,8 +449,8 @@ const RecipeScreen = ({ route }) => {
 
     // Return formatted ratio string
     return totalPlant > 0
-      ? `${meatRatio}:${boneRatio}:${organRatio}:${plantRatio}`
-      : `${meatRatio}:${boneRatio}:${organRatio}`
+      ? `${meatRatio}M:${boneRatio}B:${organRatio}O:${plantRatio}P`
+      : `${meatRatio}M:${boneRatio}B:${organRatio}O`
   }
 
   useEffect(() => {
@@ -697,40 +703,6 @@ const RecipeScreen = ({ route }) => {
     ])
   }
 
-  const handleAddNewRecipe = () => {
-    if (newRecipeName.trim()) {
-      let uniqueRecipeName = newRecipeName.trim()
-      let counter = 1
-
-      while (recipes.some((recipe) => recipe.name === uniqueRecipeName)) {
-        uniqueRecipeName = `${newRecipeName.trim()}(${counter})`
-        counter++
-      }
-
-      const newRecipe = {
-        id: uuidv4(), // Use UUID to generate unique ID
-        name: uniqueRecipeName,
-        ingredients: [],
-        ratio: "80:10:10", // Default ratio
-        savedRatio: {
-          meat: 80,
-          bone: 10,
-          organ: 10,
-          plantMatter: 0,
-          includePlantMatter: false,
-          selectedRatio: "80:10:10",
-          isUserDefined: true,
-        },
-      }
-
-      setRecipes([...recipes, newRecipe])
-      setIsModalVisible(false)
-      setNewRecipeName("")
-    } else {
-      Alert.alert("Error", "Recipe name can't be empty.")
-    }
-  }
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -773,10 +745,7 @@ const RecipeScreen = ({ route }) => {
               onChangeText={setNewRecipeName}
             />
             <View style={styles.modalButtonsContainer}>
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={recipeToEdit ? handleSaveEditedRecipe : handleAddNewRecipe}
-              >
+              <TouchableOpacity style={styles.saveButton} onPress={recipeToEdit ? handleSaveEditedRecipe : null}>
                 <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -793,16 +762,6 @@ const RecipeScreen = ({ route }) => {
           </View>
         </View>
       </Modal>
-      <TouchableOpacity
-        style={styles.addNewRecipeButton}
-        onPress={() => {
-          setRecipeToEdit(null)
-          setNewRecipeName("")
-          setIsModalVisible(true)
-        }}
-      >
-        <Text style={styles.addNewRecipeButtonText}>Add New Recipe</Text>
-      </TouchableOpacity>
     </KeyboardAvoidingView>
   )
 }
@@ -811,7 +770,6 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingHorizontal: 16,
     paddingVertical: 20,
-    paddingBottom: 80, // Add padding to make room for the Add New Recipe button
   },
   noRecipesText: {
     fontSize: rs(isSmallDevice ? 14 : 16),
@@ -848,22 +806,6 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   deleteButton: {},
-  addNewRecipeButton: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: "#000080",
-    paddingVertical: vs(isSmallDevice ? 8 : 10),
-    paddingHorizontal: rs(10),
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  addNewRecipeButtonText: {
-    fontSize: rs(isSmallDevice ? 16 : 18),
-    fontWeight: "bold",
-    color: "white",
-  },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
@@ -925,4 +867,3 @@ const styles = StyleSheet.create({
 })
 
 export default RecipeScreen
-
