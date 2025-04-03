@@ -539,6 +539,25 @@ const RecipeScreen = ({ route }) => {
                   // Use the recipe's saved ratio object if available
                   ratioObject = recipe.savedRatio
                   console.log(`📥 Using recipe's saved ratio object:`, ratioObject)
+
+                  // For any non-standard ratio, treat it as custom
+                  if (
+                    ratioObject.selectedRatio !== "80:10:10" &&
+                    ratioObject.selectedRatio !== "75:15:10" &&
+                    ratioObject.selectedRatio !== "70:10:10:10" &&
+                    ratioObject.selectedRatio !== "65:15:10:10"
+                  ) {
+                    console.log("📝 Converting non-standard ratio to custom format")
+                    ratioObject = {
+                      meat: ratioObject.meat,
+                      bone: ratioObject.bone,
+                      organ: ratioObject.organ,
+                      plantMatter: ratioObject.plantMatter || 0,
+                      includePlantMatter: ratioObject.includePlantMatter || ratioObject.plantMatter > 0,
+                      selectedRatio: "custom",
+                      isUserDefined: true,
+                    }
+                  }
                 } else if (recipe.ratio && recipe.ratio.includes(":")) {
                   // Otherwise use the recipe's default ratio
                   const ratioParts = recipe.ratio.split(":").map(Number)
@@ -564,24 +583,10 @@ const RecipeScreen = ({ route }) => {
                   }
                 }
 
-                // In the loadRecipe function, ensure the ratio object is properly formatted for custom ratios
-                if (recipe.savedRatio && recipe.savedRatio.selectedRatio === "custom") {
-                  ratioObject = {
-                    meat: recipe.savedRatio.meat,
-                    bone: recipe.savedRatio.bone,
-                    organ: recipe.savedRatio.organ,
-                    plantMatter: recipe.savedRatio.plantMatter || 0,
-                    includePlantMatter: recipe.savedRatio.includePlantMatter || recipe.savedRatio.plantMatter > 0,
-                    selectedRatio: "custom",
-                    isUserDefined: true,
-                  }
-
-                  console.log("📤 Passing custom ratio from RecipeScreen:", ratioObject)
-                }
-
                 // Clear any temporary ratio modification flag
                 await AsyncStorage.removeItem("tempRatioModified")
                 await AsyncStorage.removeItem("hasUnsavedChanges")
+                await AsyncStorage.removeItem("userSelectedRatio") // Reset user selection flag
 
                 // Save ratio to AsyncStorage for persistence
                 const batch = [
@@ -796,6 +801,7 @@ const RecipeScreen = ({ route }) => {
           setIsModalVisible(true)
         }}
       >
+        <Text style={styles.addNewRecipeButtonText}>Add New Recipe</Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
   )
@@ -842,6 +848,22 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   deleteButton: {},
+  addNewRecipeButton: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: "#000080",
+    paddingVertical: vs(isSmallDevice ? 8 : 10),
+    paddingHorizontal: rs(10),
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  addNewRecipeButtonText: {
+    fontSize: rs(isSmallDevice ? 16 : 18),
+    fontWeight: "bold",
+    color: "white",
+  },
   modalContainer: {
     flex: 1,
     justifyContent: "center",

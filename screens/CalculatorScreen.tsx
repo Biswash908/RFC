@@ -153,7 +153,7 @@ const CalculatorScreen: React.FC = () => {
     // Set all corrector values to zero on initial load
     setMeatCorrect({ bone: 0, organ: 0, plantMatter: 0 })
     setBoneCorrect({ meat: 0, organ: 0, plantMatter: 0 })
-    setOrganCorrect({ meat: 0, bone: 0, plantMatter: 0 })
+    setOrganCorrect({ meat: 0, organ: 0, plantMatter: 0 })
     setPlantMatterCorrect({ meat: 0, bone: 0, organ: 0 })
   }
 
@@ -398,14 +398,33 @@ const CalculatorScreen: React.FC = () => {
           if (parsedRecipe.ratio) {
             console.log("✅ Loading ratio from selected recipe:", parsedRecipe.ratio)
 
-            // ✅ FIXED: Only use custom ratio for user-defined recipes
-            if (parsedRecipe.ratio.isUserDefined && parsedRecipe.ratio.selectedRatio === "custom") {
-              // Set the custom ratio values for user-defined recipes
-              setNewMeat(parsedRecipe.ratio.meat)
-              setNewBone(parsedRecipe.ratio.bone)
-              setNewOrgan(parsedRecipe.ratio.organ)
-              setNewPlantMatter(parsedRecipe.ratio.plantMatter || 0)
-              setIncludePlantMatter(parsedRecipe.ratio.plantMatter > 0 || parsedRecipe.ratio.includePlantMatter)
+            // Set the ratio values regardless of whether it's user-defined or not
+            setNewMeat(parsedRecipe.ratio.meat)
+            setNewBone(parsedRecipe.ratio.bone)
+            setNewOrgan(parsedRecipe.ratio.organ)
+            setNewPlantMatter(parsedRecipe.ratio.plantMatter || 0)
+            setIncludePlantMatter(parsedRecipe.ratio.plantMatter > 0 || parsedRecipe.ratio.includePlantMatter)
+            setSelectedRatio(parsedRecipe.ratio.selectedRatio)
+
+            // For any non-standard ratio, treat it as custom
+            if (
+              parsedRecipe.ratio.selectedRatio === "custom" ||
+              (parsedRecipe.ratio.selectedRatio !== "80:10:10" &&
+                parsedRecipe.ratio.selectedRatio !== "75:15:10" &&
+                parsedRecipe.ratio.selectedRatio !== "70:10:10:10" &&
+                parsedRecipe.ratio.selectedRatio !== "65:15:10:10")
+            ) {
+              console.log("📝 Setting customRatio for non-standard ratio:", parsedRecipe.ratio)
+
+              // If it's not already marked as custom, convert it
+              if (parsedRecipe.ratio.selectedRatio !== "custom") {
+                setSelectedRatio("custom")
+
+                // Also update AsyncStorage
+                AsyncStorage.setItem("selectedRatio", "custom")
+              }
+
+              // Always update the customRatio state
               setCustomRatio({
                 meat: parsedRecipe.ratio.meat,
                 bone: parsedRecipe.ratio.bone,
@@ -413,70 +432,31 @@ const CalculatorScreen: React.FC = () => {
                 plantMatter: parsedRecipe.ratio.plantMatter || 0,
                 includePlantMatter: parsedRecipe.ratio.plantMatter > 0 || parsedRecipe.ratio.includePlantMatter,
               })
-              setSelectedRatio("custom")
+            }
 
-              // Save the values to AsyncStorage
-              await AsyncStorage.setItem("meatRatio", parsedRecipe.ratio.meat.toString())
-              await AsyncStorage.setItem("boneRatio", parsedRecipe.ratio.bone.toString())
-              await AsyncStorage.setItem("organRatio", parsedRecipe.ratio.organ.toString())
-              await AsyncStorage.setItem("plantMatterRatio", (parsedRecipe.ratio.plantMatter || "0").toString())
-              await AsyncStorage.setItem("selectedRatio", "custom")
-              await AsyncStorage.setItem(
-                "includePlantMatter",
-                (parsedRecipe.ratio.plantMatter > 0 || parsedRecipe.ratio.includePlantMatter).toString(),
-              )
-            } else {
-              // For standard ratios or default recipes, use the appropriate standard ratio
-              const ratioString = parsedRecipe.ratio.selectedRatio
+            // Save the values to AsyncStorage
+            await AsyncStorage.setItem("meatRatio", parsedRecipe.ratio.meat.toString())
+            await AsyncStorage.setItem("boneRatio", parsedRecipe.ratio.bone.toString())
+            await AsyncStorage.setItem("organRatio", parsedRecipe.ratio.organ.toString())
+            await AsyncStorage.setItem("plantMatterRatio", (parsedRecipe.ratio.plantMatter || "0").toString())
+            await AsyncStorage.setItem("selectedRatio", parsedRecipe.ratio.selectedRatio)
+            await AsyncStorage.setItem(
+              "includePlantMatter",
+              (parsedRecipe.ratio.plantMatter > 0 || parsedRecipe.ratio.includePlantMatter).toString(),
+            )
 
-              if (ratioString === "80:10:10") {
-                setSelectedRatio("80:10:10")
-                setNewMeat(80)
-                setNewBone(10)
-                setNewOrgan(10)
-                setNewPlantMatter(0)
-                setIncludePlantMatter(false)
-              } else if (ratioString === "75:15:10") {
-                setSelectedRatio("75:15:10")
-                setNewMeat(75)
-                setNewBone(15)
-                setNewOrgan(10)
-                setNewPlantMatter(0)
-                setIncludePlantMatter(false)
-              } else if (ratioString === "70:10:10:10") {
-                setSelectedRatio("70:10:10:10")
-                setNewMeat(70)
-                setNewBone(10)
-                setNewOrgan(10)
-                setNewPlantMatter(10)
-                setIncludePlantMatter(true)
-              } else if (ratioString === "65:15:10:10") {
-                setSelectedRatio("65:15:10:10")
-                setNewMeat(65)
-                setNewBone(15)
-                setNewOrgan(10)
-                setNewPlantMatter(10)
-                setIncludePlantMatter(true)
-              } else {
-                // For other standard ratios, use the values but not as custom
-                setNewMeat(parsedRecipe.ratio.meat)
-                setNewBone(parsedRecipe.ratio.bone)
-                setNewOrgan(parsedRecipe.ratio.organ)
-                setNewPlantMatter(parsedRecipe.ratio.plantMatter || 0)
-                setIncludePlantMatter(parsedRecipe.ratio.plantMatter > 0 || parsedRecipe.ratio.includePlantMatter)
-                setSelectedRatio(parsedRecipe.ratio.selectedRatio)
-              }
-
-              // Save the values to AsyncStorage
-              await AsyncStorage.setItem("meatRatio", parsedRecipe.ratio.meat.toString())
-              await AsyncStorage.setItem("boneRatio", parsedRecipe.ratio.bone.toString())
-              await AsyncStorage.setItem("organRatio", parsedRecipe.ratio.organ.toString())
-              await AsyncStorage.setItem("plantMatterRatio", (parsedRecipe.ratio.plantMatter || "0").toString())
-              await AsyncStorage.setItem("selectedRatio", parsedRecipe.ratio.selectedRatio)
-              await AsyncStorage.setItem(
-                "includePlantMatter",
-                (parsedRecipe.ratio.plantMatter > 0 || parsedRecipe.ratio.includePlantMatter).toString(),
-              )
+            // For custom ratios, also save to custom ratio keys
+            if (parsedRecipe.ratio.selectedRatio === "custom") {
+              await AsyncStorage.multiSet([
+                ["customMeatRatio", parsedRecipe.ratio.meat.toString()],
+                ["customBoneRatio", parsedRecipe.ratio.bone.toString()],
+                ["customOrganRatio", parsedRecipe.ratio.organ.toString()],
+                ["customPlantMatterRatio", (parsedRecipe.ratio.plantMatter || "0").toString()],
+                [
+                  "customIncludePlantMatter",
+                  (parsedRecipe.ratio.plantMatter > 0 || parsedRecipe.ratio.includePlantMatter).toString(),
+                ],
+              ])
             }
           }
         }
@@ -566,6 +546,13 @@ const CalculatorScreen: React.FC = () => {
       checkUserSelection()
     }
   }, [route.params?.ratio])
+
+  // Add a debug effect to log when customRatio changes
+  // Add this after the other useEffect hooks
+
+  useEffect(() => {
+    console.log("🔍 customRatio state changed:", customRatio)
+  }, [customRatio])
 
   // Modify the setRatio function to ensure temporary values are properly saved and loaded
   const setRatio = (meat: number, bone: number, organ: number, plantMatter: number, ratio: string) => {
@@ -1160,12 +1147,29 @@ const CalculatorScreen: React.FC = () => {
     return `${action} ${formattedValue}${unit} of ${ingredient}`
   }
 
-  const displayCustomRatio =
-    selectedRatio === "custom"
-      ? `${customRatio.meat || newMeat}:${customRatio.bone || newBone}:${customRatio.organ || newOrgan}${
-          customRatio.includePlantMatter || includePlantMatter ? `:${customRatio.plantMatter || newPlantMatter}` : ""
-        }`
-      : "Custom Ratio"
+  const displayCustomRatio = (() => {
+    if (selectedRatio === "custom") {
+      // Use the current values if customRatio is empty
+      const meatValue = customRatio.meat > 0 ? customRatio.meat : newMeat
+      const boneValue = customRatio.bone > 0 ? customRatio.bone : newBone
+      const organValue = customRatio.organ > 0 ? customRatio.organ : newOrgan
+      const plantValue = customRatio.plantMatter > 0 ? customRatio.plantMatter : newPlantMatter
+      const includePlant = customRatio.includePlantMatter || includePlantMatter
+
+      console.log("📊 Building custom ratio display with:", {
+        meatValue,
+        boneValue,
+        organValue,
+        plantValue,
+        includePlant,
+        customRatio,
+        newValues: { newMeat, newBone, newOrgan, newPlantMatter },
+      })
+
+      return `${meatValue}:${boneValue}:${organValue}${includePlant ? `:${plantValue}` : ""}`
+    }
+    return "Custom Ratio"
+  })()
 
   // Add this before the return statement
   console.log("Current ratio state:", {
@@ -1466,3 +1470,4 @@ const styles = StyleSheet.create({
 })
 
 export default CalculatorScreen
+
