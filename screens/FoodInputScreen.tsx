@@ -207,41 +207,47 @@ const FoodInputScreen: React.FC = () => {
   }
 
   const calculateTotals = (updatedIngredients: Ingredient[]) => {
-    const totalWt = updatedIngredients.reduce(
-      (sum, ing) => sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit),
-      0,
-    )
-
+    // Calculate total meat weight
     const meatWeight = updatedIngredients.reduce(
       (sum, ing) => sum + convertToUnit(ing.meatWeight, ing.unit, globalUnit),
       0,
     )
 
+    // Calculate total bone weight
     const boneWeight = updatedIngredients.reduce(
       (sum, ing) => sum + convertToUnit(ing.boneWeight, ing.unit, globalUnit),
       0,
     )
 
+    // Calculate total organ weight
     const organWeight = updatedIngredients.reduce(
       (sum, ing) => sum + convertToUnit(ing.organWeight, ing.unit, globalUnit),
       0,
     )
 
-    // Correctly sum all plant matter (fruits, vegetables, nuts)
+    // Calculate total plant matter weight
     const plantMatterWeight = updatedIngredients.reduce((sum, ing) => {
+      // Check if ingredient type is Fruit, Vegetable, or Nut & Seed
       if (ing.type === "Fruit" || ing.type === "Vegetable" || ing.type === "Nut & Seed") {
+        // If yes, add its total weight converted to the global unit
         return sum + convertToUnit(ing.totalWeight, ing.unit, globalUnit)
       } else if (ing.plantMatterWeight) {
+        // Otherwise, if it has a specific plantMatterWeight field, add that converted weight
         return sum + convertToUnit(ing.plantMatterWeight, ing.unit, globalUnit)
       }
+      // If neither condition is met, return the current sum
       return sum
     }, 0)
 
-    setTotalWeight(totalWt)
-    setTotalMeat(meatWeight)
-    setTotalBone(boneWeight)
-    setTotalOrgan(organWeight)
-    setTotalPlantMatter(plantMatterWeight)
+    // Calculate the grand total weight by summing the component totals
+    const grandTotalWeight = meatWeight + boneWeight + organWeight + plantMatterWeight;
+
+    // Update the state variables
+    setTotalWeight(grandTotalWeight); // Use the sum of components for the grand total [MODIFIED]
+    setTotalMeat(meatWeight);
+    setTotalBone(boneWeight);
+    setTotalOrgan(organWeight);
+    setTotalPlantMatter(plantMatterWeight);
   }
 
   // Add this function to handle custom ratio persistence
@@ -989,10 +995,10 @@ const styles = StyleSheet.create({
   },
   topBar: {
     backgroundColor: "white",
-    paddingVertical: Platform.OS === "ios" ? vs(isSmallDevice ? 7 : 15) : vs(isSmallDevice ? 8 : 12),
+    paddingVertical: vs(isSmallDevice ? 7 : 15),
     alignItems: "center",
-    marginTop: Platform.OS === "ios" ? (isSmallDevice ? 5 : -10) : isSmallDevice ? 8 : 12,
-    marginBottom: Platform.OS === "ios" ? (isSmallDevice ? 5 : -6) : isSmallDevice ? -4 : -8,
+    marginTop: Platform.OS === "ios" ? (isSmallDevice ? 5 : -10) : isSmallDevice ? 10 : 12, // Different values for small/big Android
+    marginBottom: Platform.OS === "ios" ? (isSmallDevice ? 5 : -5) : isSmallDevice ? 2 : -6, // Different values for small/big Android
   },
   topBarText: {
     fontSize: rs(isSmallDevice ? 20 : 22),

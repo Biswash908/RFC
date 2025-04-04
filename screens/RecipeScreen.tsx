@@ -35,292 +35,246 @@ const RecipeScreen = ({ route }) => {
   const navigation = useNavigation()
   const defaultRecipes = [
     {
-      id: "default1",
-      name: "Beef Mix",
-      ingredients: [
+      "id": "recipe1_80_10_10_450g",
+      "name": "Balanced Beef & Chicken",
+      "ingredients": [
         {
-          id: "5",
-          name: "Beef Steak",
-          totalWeight: 500,
-          meatWeight: 500,
-          boneWeight: 0,
-          organWeight: 0,
-          meat: 100,
-          bone: 0,
-          organ: 0,
-          unit: "g",
+          "id": "6",
+          "name": "Beef Heart",
+          "totalWeight": 345, // Rescaled from 767g
+          "meatWeight": 345,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 0,
+          "meat": 100, "bone": 0, "organ": 0, "type": "Meat", "unit": "g"
         },
         {
-          id: "2",
-          name: "Beef Kidney",
-          totalWeight: 200,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 200,
-          meat: 0,
-          bone: 0,
-          organ: 100,
-          unit: "g",
+          "id": "43",
+          "name": "Chicken Neck skinless",
+          "totalWeight": 60, // Rescaled from 134g
+          "meatWeight": 15,
+          "boneWeight": 45,
+          "organWeight": 0,
+          "plantMatterWeight": 0,
+          "meat": 25, "bone": 75, "organ": 0, "type": "Meat", "unit": "g"
         },
         {
-          id: "3",
-          name: "Beef Liver",
-          totalWeight: 150,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 150,
-          meat: 0,
-          bone: 0,
-          organ: 100,
-          unit: "g",
+          "id": "8",
+          "name": "Beef Liver",
+          "totalWeight": 22, // Rescaled from 50g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 22,
+          "plantMatterWeight": 0,
+          "meat": 0, "bone": 0, "organ": 100, "type": "Meat", "unit": "g"
         },
         {
-          id: "1",
-          name: "Beef Heart",
-          totalWeight: 150,
-          meatWeight: 150,
-          boneWeight: 0,
-          organWeight: 0,
-          meat: 100,
-          bone: 0,
-          organ: 0,
-          unit: "g",
-        },
-        {
-          id: "4",
-          name: "Beef Ribs",
-          totalWeight: 100,
-          meatWeight: 48,
-          boneWeight: 52,
-          organWeight: 0,
-          meat: 48,
-          bone: 52,
-          organ: 0,
-          unit: "g",
-        },
+          "id": "7",
+          "name": "Beef Kidney",
+          "totalWeight": 22,
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 22,
+          "plantMatterWeight": 0,
+          "meat": 0, "bone": 0, "organ": 100, "type": "Meat", "unit": "g"
+        }
       ],
-      ratio: "80:10:10", // Default ratio for Beef Mix
-      savedRatio: {
-        meat: 80,
-        bone: 10,
-        organ: 10,
-        plantMatter: 0,
-        selectedRatio: "80:10:10",
-        includePlantMatter: false,
-        isUserDefined: false,
-      },
+      "ratio": "80:10:10",
+      "savedRatio": { "meat": 80, "bone": 10, "organ": 10, "plantMatter": 0, "selectedRatio": "80:10:10", "includePlantMatter": false, "isUserDefined": false }
     },
     {
-      id: "default2",
-      name: "Chicken Delight",
-      ingredients: [
+      "id": "recipe2_75_15_10_500g",
+      "name": "Chicken & Duck Bone Boost",
+      "ingredients": [
         {
-          id: "12",
-          name: "Chicken Drumstick",
-          totalWeight: 300,
-          meatWeight: 198,
-          boneWeight: 99,
-          organWeight: 0,
-          meat: 66,
-          bone: 33,
-          organ: 0,
-          unit: "g",
+          "id": "32",
+          "name": "Chicken Breast boneless",
+          "totalWeight": 325, // Rescaled from 650g
+          "meatWeight": 325,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 0,
+          "meat": 100, "bone": 0, "organ": 0, "type": "Meat", "unit": "g"
         },
         {
-          id: "19",
-          name: "Chicken Liver",
-          totalWeight: 100,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 100,
-          meat: 0,
-          bone: 0,
-          organ: 100,
-          unit: "g",
+          "id": "62",
+          "name": "Duck Feet",
+          "totalWeight": 125, // Rescaled from 250g
+          "meatWeight": 50,
+          "boneWeight": 75,
+          "organWeight": 0,
+          "plantMatterWeight": 0,
+          "meat": 40, "bone": 60, "organ": 0, "type": "Meat", "unit": "g"
         },
         {
-          id: "15",
-          name: "Chicken Gizzard",
-          totalWeight: 200,
-          meatWeight: 200,
-          boneWeight: 0,
-          organWeight: 0,
-          meat: 100,
-          bone: 0,
-          organ: 0,
-          unit: "g",
+          "id": "109",
+          "name": "Lamb Liver",
+          "totalWeight": 25, // Rescaled from 50g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 25,
+          "plantMatterWeight": 0,
+          "meat": 0, "bone": 0, "organ": 100, "type": "Meat", "unit": "g"
         },
         {
-          id: "10",
-          name: "Chicken Breast boneless",
-          totalWeight: 300,
-          meatWeight: 300,
-          boneWeight: 0,
-          organWeight: 0,
-          meat: 100,
-          bone: 0,
-          organ: 0,
-          unit: "g",
-        },
-        {
-          id: "9",
-          name: "Chicken Back",
-          totalWeight: 100,
-          meatWeight: 50,
-          boneWeight: 50,
-          organWeight: 0,
-          meat: 50,
-          bone: 50,
-          organ: 0,
-          unit: "g",
-        },
+          "id": "107",
+          "name": "Lamb Kidney",
+          "totalWeight": 25, // Rescaled from 50g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 25,
+          "plantMatterWeight": 0,
+          "meat": 0, "bone": 0, "organ": 100, "type": "Meat", "unit": "g"
+        }
       ],
-      ratio: "75:15:10", // Default ratio for Chicken Delight
-      savedRatio: {
-        meat: 75,
-        bone: 15,
-        organ: 10,
-        plantMatter: 0,
-        selectedRatio: "75:15:10",
-        includePlantMatter: false,
-        isUserDefined: false,
-      },
+      "ratio": "75:15:10",
+      "savedRatio": { "meat": 75, "bone": 15, "organ": 10, "plantMatter": 0, "selectedRatio": "75:15:10", "includePlantMatter": false, "isUserDefined": false }
     },
     {
-      id: "default3",
-      name: "Lamb Feast",
-      ingredients: [
+      "id": "recipe3_70_10_10_10_550g",
+      "name": "Pork & Veggie Blend",
+      "ingredients": [
         {
-          id: "45",
-          name: "Lamb Ribs",
-          totalWeight: 350,
-          meatWeight: 259,
-          boneWeight: 91,
-          organWeight: 0,
-          meat: 74,
-          bone: 26,
-          organ: 0,
-          unit: "g",
+          "id": "139",
+          "name": "Pork Heart",
+          "totalWeight": 334, // Rescaled from 607g
+          "meatWeight": 334,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 0,
+          "meat": 100, "bone": 0, "organ": 0, "type": "Meat", "unit": "g"
         },
         {
-          id: "42",
-          name: "Lamb Kidney",
-          totalWeight: 100,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 100,
-          meat: 0,
-          bone: 0,
-          organ: 100,
-          unit: "g",
+          "id": "147",
+          "name": "Pork Ribs",
+          "totalWeight": 106, // Rescaled from 193g
+          "meatWeight": 51,
+          "boneWeight": 55,
+          "organWeight": 0,
+          "plantMatterWeight": 0,
+          "meat": 48, "bone": 52, "organ": 0, "type": "Meat", "unit": "g"
         },
         {
-          id: "43",
-          name: "Lamb Liver",
-          totalWeight: 120,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 120,
-          meat: 0,
-          bone: 0,
-          organ: 100,
-          unit: "g",
+          "id": "142",
+          "name": "Pork Liver",
+          "totalWeight": 28, // Rescaled from 50g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 28,
+          "plantMatterWeight": 0,
+          "meat": 0, "bone": 0, "organ": 100, "type": "Meat", "unit": "g"
         },
         {
-          id: "41",
-          name: "Lamb Heart",
-          totalWeight: 200,
-          meatWeight: 200,
-          boneWeight: 0,
-          organWeight: 0,
-          meat: 100,
-          bone: 0,
-          organ: 0,
-          unit: "g",
+          "id": "140",
+          "name": "Pork Kidney",
+          "totalWeight": 27, // Rescaled from 50g (adjusted rounding)
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 27,
+          "plantMatterWeight": 0,
+          "meat": 0, "bone": 0, "organ": 100, "type": "Meat", "unit": "g"
         },
         {
-          id: "44",
-          name: "Lamb Loin",
-          totalWeight: 150,
-          meatWeight: 108,
-          boneWeight: 42,
-          organWeight: 0,
-          meat: 72,
-          bone: 28,
-          organ: 0,
-          unit: "g",
+          "id": "24",
+          "name": "Carrots",
+          "totalWeight": 28, // Rescaled from 50g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 28,
+          "meat": 0, "bone": 0, "organ": 0, "vegetable": 100, "fruit": 0, "nuts": 0, "type": "Vegetable", "unit": "g"
         },
+        {
+          "id": "16",
+          "name": "Blueberries",
+          "totalWeight": 27, // Rescaled from 50g (adjusted rounding)
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 27,
+          "meat": 0, "bone": 0, "organ": 0, "vegetable": 0, "fruit": 100, "nuts": 0, "type": "Fruit", "unit": "g"
+        }
       ],
-      ratio: "65:25:10", // Default ratio for Lamb Feast
-      savedRatio: {
-        meat: 65,
-        bone: 25,
-        organ: 10,
-        plantMatter: 0,
-        selectedRatio: "65:25:10",
-        includePlantMatter: false,
-        isUserDefined: false,
-      },
+      "ratio": "70:10:10:10",
+      "savedRatio": { "meat": 70, "bone": 10, "organ": 10, "plantMatter": 10, "selectedRatio": "70:10:10:10", "includePlantMatter": true, "isUserDefined": false }
     },
     {
-      id: "default4",
-      name: "Veggie Mix",
-      ingredients: [
+      "id": "recipe4_65_15_10_10_400g",
+      "name": "Rabbit, Turkey & Plant Mix",
+      "ingredients": [
         {
-          id: "v1",
-          name: "Broccoli",
-          totalWeight: 100,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 0,
-          plantMatterWeight: 100,
-          type: "Vegetable",
-          unit: "g",
+          "id": "169",
+          "name": "Rabbit Mince, boneless",
+          "totalWeight": 170, // Rescaled from 425g
+          "meatWeight": 170,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 0,
+          "meat": 100, "bone": 0, "organ": 0, "type": "Meat", "unit": "g"
         },
         {
-          id: "v2",
-          name: "Carrots",
-          totalWeight: 100,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 0,
-          plantMatterWeight: 100,
-          type: "Vegetable",
-          unit: "g",
+          "id": "186",
+          "name": "Turkey Neck",
+          "totalWeight": 150, // Rescaled from 375g
+          "meatWeight": 90,
+          "boneWeight": 60,
+          "organWeight": 0,
+          "plantMatterWeight": 0,
+          "meat": 60, "bone": 40, "organ": 0, "type": "Meat", "unit": "g"
         },
         {
-          id: "v3",
-          name: "Spinach",
-          totalWeight: 50,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 0,
-          plantMatterWeight: 50,
-          type: "Vegetable",
-          unit: "g",
+          "id": "185",
+          "name": "Turkey Liver",
+          "totalWeight": 20, // Rescaled from 50g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 20,
+          "plantMatterWeight": 0,
+          "meat": 0, "bone": 0, "organ": 100, "type": "Meat", "unit": "g"
         },
         {
-          id: "v4",
-          name: "Blueberries",
-          totalWeight: 50,
-          meatWeight: 0,
-          boneWeight: 0,
-          organWeight: 0,
-          plantMatterWeight: 50,
-          type: "Fruit",
-          unit: "g",
+          "id": "183",
+          "name": "Turkey Kidney",
+          "totalWeight": 20, // Rescaled from 50g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 20,
+          "plantMatterWeight": 0,
+          "meat": 0, "bone": 0, "organ": 100, "type": "Meat", "unit": "g"
         },
+        {
+          "id": "19",
+          "name": "Broccoli",
+          "totalWeight": 20, // Rescaled from 50g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 20,
+          "meat": 0, "bone": 0, "organ": 0, "vegetable": 100, "fruit": 0, "nuts": 0, "type": "Vegetable", "unit": "g"
+        },
+        {
+          "id": "155",
+          "name": "Pumpkin Seeds, unsalted",
+          "totalWeight": 12, // Rescaled from 30g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 12,
+          "meat": 0, "bone": 0, "organ": 0, "vegetable": 0, "fruit": 0, "nuts": 100, "type": "Nut & Seed", "unit": "g"
+        },
+        {
+          "id": "2",
+          "name": "Apples",
+          "totalWeight": 8, // Rescaled from 20g
+          "meatWeight": 0,
+          "boneWeight": 0,
+          "organWeight": 0,
+          "plantMatterWeight": 8,
+          "meat": 0, "bone": 0, "organ": 0, "vegetable": 0, "fruit": 100, "nuts": 0, "type": "Fruit", "unit": "g"
+        }
       ],
-      ratio: "70:10:10:10", // Default ratio with plant matter
-      savedRatio: {
-        meat: 70,
-        bone: 10,
-        organ: 10,
-        plantMatter: 10,
-        selectedRatio: "70:10:10:10",
-        includePlantMatter: true,
-        isUserDefined: false,
-      },
+      "ratio": "65:15:10:10",
+      "savedRatio": { "meat": 65, "bone": 15, "organ": 10, "plantMatter": 10, "selectedRatio": "65:15:10:10", "includePlantMatter": true, "isUserDefined": false }
     },
   ]
 
@@ -465,49 +419,39 @@ const RecipeScreen = ({ route }) => {
     saveRecipes()
   }, [recipes])
 
-  const navigateToRecipeContent = (recipe) => {
-    // First check if there are unsaved changes in the current recipe
-    const checkUnsavedChanges = async () => {
-      try {
-        const currentRecipeId = await AsyncStorage.getItem("currentRecipeId")
-        const hasUnsavedChangesStr = await AsyncStorage.getItem("hasUnsavedChanges")
-        const hasUnsavedChanges = hasUnsavedChangesStr === "true"
-
-        if (currentRecipeId && hasUnsavedChanges) {
-          // If there are unsaved changes, show a confirmation dialog
-          Alert.alert("Unsaved Changes", "You have unsaved changes in the current recipe. What would you like to do?", [
-            {
-              text: "Save Changes",
-              onPress: async () => {
-                // Navigate to FoodInputScreen to save changes
-                navigation.navigate("HomeTabs", {
-                  screen: "HomeTabsHome",
-                  params: {
-                    saveChangesFirst: true,
-                  },
-                })
-              },
-            },
-            {
-              text: "Discard & Load",
-              onPress: () => loadRecipe(recipe),
-            },
-            {
-              text: "Cancel",
-              style: "cancel",
-            },
-          ])
-          return
+    const navigateToRecipeContent = (recipe) => {
+      // First check if there are unsaved changes in the current recipe
+      const checkUnsavedChanges = async () => {
+        try {
+          const selectedRecipeStr = await AsyncStorage.getItem("selectedRecipe")
+          if (selectedRecipeStr) {
+            const hasUnsavedChangesStr = await AsyncStorage.getItem("hasUnsavedChanges")
+            const hasUnsavedChanges = hasUnsavedChangesStr === "true"
+  
+            if (hasUnsavedChanges) {
+              // If there are unsaved changes, show a simplified confirmation dialog
+              Alert.alert("Unsaved Changes", "Are you sure you want to load? You have unsaved changes.", [
+                {
+                  text: "Load",
+                  onPress: () => loadRecipe(recipe),
+                },
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                },
+              ])
+              return
+            }
+          }
+  
+          // If no unsaved changes, proceed with loading the recipe
+          loadRecipe(recipe)
+        } catch (error) {
+          console.error("Error checking for unsaved changes:", error)
+          // If there's an error, proceed with loading the recipe
+          loadRecipe(recipe)
         }
-
-        // If no unsaved changes, proceed with loading the recipe
-        loadRecipe(recipe)
-      } catch (error) {
-        console.error("Error checking for unsaved changes:", error)
-        // If there's an error, proceed with loading the recipe
-        loadRecipe(recipe)
       }
-    }
 
     // Function to load the recipe
     const loadRecipe = (recipe) => {
