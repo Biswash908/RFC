@@ -113,7 +113,7 @@ const FoodInfoScreen = ({ route, navigation }: Props) => {
   }
 
   const handleSaveIngredient = () => {
-    const weightValue = Number.parseFloat(weight)
+    const weightValue = isNaN(Number.parseFloat(weight)) ? 0 : Number.parseFloat(weight)
     // For grams, ensure we're using whole numbers
     const formattedWeight = selectedUnit === "g" ? Math.round(weightValue) : weightValue
 

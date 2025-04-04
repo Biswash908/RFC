@@ -555,6 +555,7 @@ const CalculatorScreen: React.FC = () => {
   }, [customRatio])
 
   // Modify the setRatio function to ensure temporary values are properly saved and loaded
+  // Modify the setRatio function to ensure it properly marks changes
   const setRatio = (meat: number, bone: number, organ: number, plantMatter: number, ratio: string) => {
     console.log(`✅ Setting ratio: ${ratio} (${meat}:${bone}:${organ}:${plantMatter})`)
 
@@ -587,6 +588,8 @@ const CalculatorScreen: React.FC = () => {
       ["selectedRatio", ratio],
       ["includePlantMatter", (plantMatter > 0).toString()],
       ["userSelectedRatio", "true"], // Add this to track user selection
+      ["tempRatioModified", "true"], // Always mark ratio as modified when user changes it
+      ["hasUnsavedChanges", "true"], // Mark as having unsaved changes
 
       // Temporary ratio values (separate from permanent recipe data)
       ["tempMeatRatio", meat.toString()],
@@ -1470,4 +1473,3 @@ const styles = StyleSheet.create({
 })
 
 export default CalculatorScreen
-

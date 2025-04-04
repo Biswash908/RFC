@@ -56,6 +56,7 @@ export type RootStackParamList = {
     recipeName: string
     ingredients: Ingredient[]
     ratio?: any
+    isRecipeLoad?: boolean
   }
   FoodInfoScreen: { ingredient: Ingredient; editMode: boolean }
   SearchScreen: undefined
@@ -108,6 +109,50 @@ const FoodInputScreen: React.FC = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const selectedRatioRef = useRef<string | null>(null)
 
+  // Add this useEffect at the top of the component, right after the state declarations
+  useEffect(() => {
+    // Reset all change tracking flags on component mount
+    const resetAllFlags = async () => {
+      try {
+        console.log("🔄 Initializing app - resetting all change tracking flags")
+        await AsyncStorage.multiSet([
+          ["hasUnsavedChanges", "false"],
+          ["tempRatioModified", "false"],
+          ["userSelectedRatio", "false"],
+        ])
+        setHasUnsavedChanges(false)
+      } catch (error) {
+        console.error("Failed to reset flags on startup:", error)
+      }
+    }
+
+    resetAllFlags()
+  }, []) // Empty dependency array means this runs once on mount
+
+  // Add this function to reset change tracking flags when the screen loads
+  // Add this near the top of the component, after the state declarations
+  useEffect(() => {
+    // Reset change tracking flags when the screen first loads
+    const resetChangeFlags = async () => {
+      try {
+        // Only reset if we don't have any ingredients yet
+        const currentIngredientsStr = await AsyncStorage.getItem("currentIngredients")
+        if (!currentIngredientsStr || JSON.parse(currentIngredientsStr).length === 0) {
+          console.log("🔄 Resetting change tracking flags on FoodInputScreen load")
+          await AsyncStorage.multiSet([
+            ["hasUnsavedChanges", "false"],
+            ["tempRatioModified", "false"],
+          ])
+          setHasUnsavedChanges(false)
+        }
+      } catch (error) {
+        console.error("Failed to reset change flags:", error)
+      }
+    }
+
+    resetChangeFlags()
+  }, [])
+
   useEffect(() => {
     const newIngredient = route.params?.updatedIngredient
     if (newIngredient) {
@@ -139,7 +184,15 @@ const FoodInputScreen: React.FC = () => {
   // Handle ratio updates from CalculatorScreen
   useEffect(() => {
     if (route.params?.ratio) {
-      const { meat, bone, organ, plantMatter, selectedRatio, includePlantMatter: includeP } = route.params.ratio
+      const {
+        meat,
+        bone,
+        organ,
+        plantMatter,
+        selectedRatio,
+        includePlantMatter: includeP,
+        isRecipeLoad,
+      } = route.params.ratio
 
       console.log("📥 Received ratio in FoodInputScreen:", {
         meat,
@@ -148,6 +201,7 @@ const FoodInputScreen: React.FC = () => {
         plantMatter,
         selectedRatio,
         includeP,
+        isRecipeLoad,
       })
 
       // Update ratio state
@@ -170,24 +224,39 @@ const FoodInputScreen: React.FC = () => {
       // Save temporary ratio values to AsyncStorage
       const saveTemporaryRatio = async () => {
         try {
-          await AsyncStorage.multiSet([
+          // Check if this is a recipe load from the route params
+          const isRecipeLoad = route.params?.isRecipeLoad || route.params?.ratio?.isRecipeLoad
+          console.log(`📥 Handling ratio update (isRecipeLoad=${isRecipeLoad})`)
+
+          const batch = [
             ["tempMeatRatio", meat.toString()],
             ["tempBoneRatio", bone.toString()],
             ["tempOrganRatio", organ.toString()],
             ["tempPlantMatterRatio", (plantMatter || "0").toString()],
             ["tempSelectedRatio", selectedRatio],
             ["tempIncludePlantMatter", (includeP || plantMatter > 0).toString()],
-            ["tempRatioModified", "true"],
-          ])
-          console.log("✅ Saved temporary ratio values to AsyncStorage")
+          ]
+
+          // Only mark as modified if this is NOT a recipe load
+          if (!isRecipeLoad) {
+            batch.push(["tempRatioModified", "true"])
+            batch.push(["userSelectedRatio", "true"])
+          } else {
+            // If it's a recipe load, explicitly set these to false
+            batch.push(["tempRatioModified", "false"])
+            batch.push(["userSelectedRatio", "false"])
+          }
+
+          await AsyncStorage.multiSet(batch)
+          console.log(`✅ Saved temporary ratio values to AsyncStorage (modified=${!isRecipeLoad})`)
         } catch (error) {
           console.error("❌ Failed to save temporary ratio values:", error)
         }
       }
       saveTemporaryRatio()
 
-      // Mark as having unsaved changes if this is a temporary ratio
-      if (route.params.ratio.isTemporary) {
+      // Mark as having unsaved changes if this is a temporary ratio and NOT a recipe load
+      if (route.params.ratio.isTemporary && !route.params?.isRecipeLoad && !route.params?.ratio?.isRecipeLoad) {
         setHasUnsavedChanges(true)
         AsyncStorage.setItem("hasUnsavedChanges", "true")
       }
@@ -206,6 +275,17 @@ const FoodInputScreen: React.FC = () => {
     }
   }
 
+  // Add this function after the calculateTotals function to save current ingredients to AsyncStorage
+  const saveCurrentIngredientsToStorage = (updatedIngredients) => {
+    try {
+      AsyncStorage.setItem("currentIngredients", JSON.stringify(updatedIngredients))
+      console.log("✅ Saved current ingredients to AsyncStorage for change detection")
+    } catch (error) {
+      console.error("❌ Failed to save current ingredients to AsyncStorage:", error)
+    }
+  }
+
+  // Modify the calculateTotals function to save ingredients after calculation
   const calculateTotals = (updatedIngredients: Ingredient[]) => {
     // Calculate total meat weight
     const meatWeight = updatedIngredients.reduce(
@@ -240,14 +320,17 @@ const FoodInputScreen: React.FC = () => {
     }, 0)
 
     // Calculate the grand total weight by summing the component totals
-    const grandTotalWeight = meatWeight + boneWeight + organWeight + plantMatterWeight;
+    const grandTotalWeight = meatWeight + boneWeight + organWeight + plantMatterWeight
 
     // Update the state variables
-    setTotalWeight(grandTotalWeight); // Use the sum of components for the grand total [MODIFIED]
-    setTotalMeat(meatWeight);
-    setTotalBone(boneWeight);
-    setTotalOrgan(organWeight);
-    setTotalPlantMatter(plantMatterWeight);
+    setTotalWeight(grandTotalWeight) // Use the sum of components for the grand total [MODIFIED]
+    setTotalMeat(meatWeight)
+    setTotalBone(boneWeight)
+    setTotalOrgan(organWeight)
+    setTotalPlantMatter(plantMatterWeight)
+
+    // After setting all the state variables, save the ingredients to AsyncStorage
+    saveCurrentIngredientsToStorage(updatedIngredients)
   }
 
   // Add this function to handle custom ratio persistence
@@ -638,6 +721,9 @@ const FoodInputScreen: React.FC = () => {
         setIngredients(updatedIngredients)
         calculateTotals(updatedIngredients)
 
+        // Save the ingredients to AsyncStorage for change detection
+        saveCurrentIngredientsToStorage(updatedIngredients)
+
         // Store original ingredients for change detection
         originalIngredientsRef.current = JSON.parse(JSON.stringify(updatedIngredients))
       }
@@ -696,50 +782,110 @@ const FoodInputScreen: React.FC = () => {
     }
   }, [route.params, globalUnit])
 
+  // Also modify the checkForChanges function to be more robust
+  // Around line 400, update the checkForChanges function:
+
   // Add a function to check for unsaved changes
-  const checkForChanges = () => {
-    // Check if ingredients have changed
-    if (originalIngredientsRef.current.length !== ingredients.length) {
-      setHasUnsavedChanges(true)
-      AsyncStorage.setItem("hasUnsavedChanges", "true")
-      return
-    }
+  const checkForChanges = async () => {
+    try {
+      // First check if we're in a recipe loading state
+      const isRecipeLoad = route.params?.isRecipeLoad || route.params?.ratio?.isRecipeLoad
+      if (isRecipeLoad) {
+        console.log("🔄 Recipe is being loaded - ignoring change detection")
+        setHasUnsavedChanges(false)
+        await AsyncStorage.setItem("hasUnsavedChanges", "false")
+        return
+      }
 
-    // Check if any ingredient details have changed
-    const ingredientsChanged = ingredients.some((ingredient, index) => {
-      const original = originalIngredientsRef.current[index]
-      if (!original) return true
+      // Get the actual flags from AsyncStorage for accurate checking
+      const tempRatioModifiedStr = await AsyncStorage.getItem("tempRatioModified")
+      const userSelectedRatioStr = await AsyncStorage.getItem("userSelectedRatio")
+      const ratioModified = tempRatioModifiedStr === "true" && userSelectedRatioStr === "true"
 
-      return (
-        ingredient.name !== original.name ||
-        ingredient.meatWeight !== original.meatWeight ||
-        ingredient.boneWeight !== original.boneWeight ||
-        ingredient.organWeight !== original.organWeight ||
-        ingredient.plantMatterWeight !== original.plantMatterWeight ||
-        ingredient.totalWeight !== original.totalWeight
+      // If we have no original ingredients to compare against, there can't be changes
+      if (originalIngredientsRef.current.length === 0 && ingredients.length === 0) {
+        console.log("🔄 No ingredients to compare - no changes detected")
+        setHasUnsavedChanges(false)
+        await AsyncStorage.setItem("hasUnsavedChanges", "false")
+        return
+      }
+
+      // Check if ingredients have changed
+      if (originalIngredientsRef.current.length !== ingredients.length) {
+        console.log("📝 Ingredient count changed - marking as unsaved")
+        setHasUnsavedChanges(true)
+        await AsyncStorage.setItem("hasUnsavedChanges", "true")
+        return
+      }
+
+      // Check if any ingredient details have changed
+      let ingredientsChanged = false
+
+      // Only check ingredient details if we have a valid reference to compare against
+      if (originalIngredientsRef.current.length > 0) {
+        // Sort both arrays by name to ensure consistent comparison
+        const sortedOriginal = [...originalIngredientsRef.current].sort((a, b) =>
+          (a.name || "").localeCompare(b.name || ""),
+        )
+        const sortedCurrent = [...ingredients].sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+
+        ingredientsChanged = sortedCurrent.some((ingredient, index) => {
+          const original = sortedOriginal[index]
+          if (!original) return true
+
+          // Convert all values to numbers for consistent comparison
+          const currentMeat = Number(ingredient.meatWeight) || 0
+          const originalMeat = Number(original.meatWeight) || 0
+          const currentBone = Number(ingredient.boneWeight) || 0
+          const originalBone = Number(original.boneWeight) || 0
+          const currentOrgan = Number(ingredient.organWeight) || 0
+          const originalOrgan = Number(original.organWeight) || 0
+          const currentPlant = Number(ingredient.plantMatterWeight) || 0
+          const originalPlant = Number(original.plantMatterWeight) || 0
+          const currentTotal = Number(ingredient.totalWeight) || 0
+          const originalTotal = Number(original.totalWeight) || 0
+
+          // Check if any values are different
+          const isDifferent =
+            ingredient.name !== original.name ||
+            Math.abs(currentMeat - originalMeat) > 0.01 ||
+            Math.abs(currentBone - originalBone) > 0.01 ||
+            Math.abs(currentOrgan - originalOrgan) > 0.01 ||
+            Math.abs(currentPlant - originalPlant) > 0.01 ||
+            Math.abs(currentTotal - originalTotal) > 0.01
+
+          if (isDifferent) {
+            console.log(`📝 Ingredient ${ingredient.name} has changed`)
+          }
+
+          return isDifferent
+        })
+      }
+
+      // Check if ratio has changed - use the flags from AsyncStorage
+      console.log(
+        `📝 Checking ratio changes: tempRatioModified=${tempRatioModifiedStr}, userSelectedRatio=${userSelectedRatioStr}`,
       )
-    })
 
-    // Check if ratio has changed
-    const ratioChanged =
-      originalRatioRef.current &&
-      (meatRatio !== originalRatioRef.current.meat ||
-        boneRatio !== originalRatioRef.current.bone ||
-        organRatio !== originalRatioRef.current.organ ||
-        plantMatterRatio !== originalRatioRef.current.plantMatter ||
-        selectedRatio !== originalRatioRef.current.selectedRatio ||
-        includePlantMatter !== originalRatioRef.current.includePlantMatter)
+      const hasChanges = ingredientsChanged || ratioModified
+      console.log(`📝 Change detection result: ingredients=${ingredientsChanged}, ratio=${ratioModified}`)
 
-    const hasChanges = ingredientsChanged || ratioChanged
-    setHasUnsavedChanges(hasChanges)
-    AsyncStorage.setItem("hasUnsavedChanges", hasChanges ? "true" : "false")
+      setHasUnsavedChanges(hasChanges)
+      await AsyncStorage.setItem("hasUnsavedChanges", hasChanges ? "true" : "false")
+    } catch (error) {
+      console.error("❌ Error in checkForChanges:", error)
+      // On error, default to no changes
+      setHasUnsavedChanges(false)
+      await AsyncStorage.setItem("hasUnsavedChanges", "false")
+    }
   }
 
-  // Add effect to check for changes when ingredients or ratio change
+  // Update the useEffect to use the async version of checkForChanges
   useEffect(() => {
     checkForChanges()
-  }, [ingredients, meatRatio, boneRatio, organRatio, plantMatterRatio, selectedRatio, includePlantMatter])
+  }, [ingredients, meatRatio, boneRatio, organRatio, plantMatterRatio, selectedRatio, includePlantMatter, route.params])
 
+  // Also update the handleDeleteIngredient function to save the updated ingredients
   const handleDeleteIngredient = (name: string) => {
     Alert.alert("Delete Ingredient", `Are you sure you want to delete ${name}?`, [
       { text: "Cancel", style: "cancel" },
@@ -750,6 +896,9 @@ const FoodInputScreen: React.FC = () => {
           setIngredients(updatedIngredients)
           calculateTotals(updatedIngredients)
 
+          // Save the updated ingredients to AsyncStorage
+          saveCurrentIngredientsToStorage(updatedIngredients)
+
           // Mark as having unsaved changes
           setHasUnsavedChanges(true)
           AsyncStorage.setItem("hasUnsavedChanges", "true")
@@ -758,6 +907,7 @@ const FoodInputScreen: React.FC = () => {
     ])
   }
 
+  // Update the handleClearScreen function to clear the stored ingredients
   const handleClearScreen = () => {
     Alert.alert("Clear Ingredients", "Are you sure you want to clear all ingredients and the recipe name?", [
       { text: "Cancel", style: "cancel" },
@@ -771,6 +921,9 @@ const FoodInputScreen: React.FC = () => {
           setTotalOrgan(0)
           setTotalPlantMatter(0)
           setTotalWeight(0)
+
+          // Clear the stored ingredients
+          AsyncStorage.removeItem("currentIngredients")
 
           // Reset the loaded recipe ID
           loadedRecipeIdRef.current = null
