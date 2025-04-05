@@ -153,6 +153,7 @@ const FoodInputScreen: React.FC = () => {
     resetChangeFlags()
   }, [])
 
+  // Modify the useEffect that handles updatedIngredient to properly mark changes
   useEffect(() => {
     const newIngredient = route.params?.updatedIngredient
     if (newIngredient) {
@@ -175,7 +176,11 @@ const FoodInputScreen: React.FC = () => {
       setIngredients(updatedIngredients)
       calculateTotals(updatedIngredients)
 
-      // Mark as having unsaved changes
+      // Save the updated ingredients to AsyncStorage for change detection
+      saveCurrentIngredientsToStorage(updatedIngredients)
+
+      // Mark as having unsaved changes - ALWAYS mark as changed when an ingredient is updated
+      console.log("📝 Ingredient updated - marking as unsaved")
       setHasUnsavedChanges(true)
       AsyncStorage.setItem("hasUnsavedChanges", "true")
     }
@@ -703,6 +708,7 @@ const FoodInputScreen: React.FC = () => {
   }
 
   // Replace multiple useEffects with a single, comprehensive one
+  // Modify the effect that handles recipe loading to properly store original ingredients
   useEffect(() => {
     if (route.params) {
       console.log("📥 Received in FoodInputScreen:", route.params)
@@ -724,7 +730,9 @@ const FoodInputScreen: React.FC = () => {
         // Save the ingredients to AsyncStorage for change detection
         saveCurrentIngredientsToStorage(updatedIngredients)
 
-        // Store original ingredients for change detection
+        // Create a deep copy of the ingredients for original reference
+        // This is critical for proper change detection
+        console.log("📥 Storing original ingredients for change detection")
         originalIngredientsRef.current = JSON.parse(JSON.stringify(updatedIngredients))
       }
 
@@ -786,6 +794,7 @@ const FoodInputScreen: React.FC = () => {
   // Around line 400, update the checkForChanges function:
 
   // Add a function to check for unsaved changes
+  // Improve the checkForChanges function to better detect weight changes
   const checkForChanges = async () => {
     try {
       // First check if we're in a recipe loading state
@@ -823,39 +832,51 @@ const FoodInputScreen: React.FC = () => {
 
       // Only check ingredient details if we have a valid reference to compare against
       if (originalIngredientsRef.current.length > 0) {
-        // Sort both arrays by name to ensure consistent comparison
-        const sortedOriginal = [...originalIngredientsRef.current].sort((a, b) =>
-          (a.name || "").localeCompare(b.name || ""),
-        )
-        const sortedCurrent = [...ingredients].sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        // Create a map of original ingredients by name for easier lookup
+        const originalIngredientsMap = {}
+        originalIngredientsRef.current.forEach((ing) => {
+          originalIngredientsMap[ing.name] = ing
+        })
 
-        ingredientsChanged = sortedCurrent.some((ingredient, index) => {
-          const original = sortedOriginal[index]
-          if (!original) return true
+        // Check each current ingredient against its original version
+        ingredientsChanged = ingredients.some((ingredient) => {
+          const original = originalIngredientsMap[ingredient.name]
+          if (!original) return true // If no original found, it's a change
 
-          // Convert all values to numbers for consistent comparison
-          const currentMeat = Number(ingredient.meatWeight) || 0
-          const originalMeat = Number(original.meatWeight) || 0
-          const currentBone = Number(ingredient.boneWeight) || 0
-          const originalBone = Number(original.boneWeight) || 0
-          const currentOrgan = Number(ingredient.organWeight) || 0
-          const originalOrgan = Number(original.organWeight) || 0
-          const currentPlant = Number(ingredient.plantMatterWeight) || 0
-          const originalPlant = Number(original.plantMatterWeight) || 0
-          const currentTotal = Number(ingredient.totalWeight) || 0
-          const originalTotal = Number(original.totalWeight) || 0
+          // Convert all values to numbers and round to 2 decimal places for consistent comparison
+          const currentMeat = Math.round(Number(ingredient.meatWeight || 0) * 100) / 100
+          const originalMeat = Math.round(Number(original.meatWeight || 0) * 100) / 100
+          const currentBone = Math.round(Number(ingredient.boneWeight || 0) * 100) / 100
+          const originalBone = Math.round(Number(original.boneWeight || 0) * 100) / 100
+          const currentOrgan = Math.round(Number(ingredient.organWeight || 0) * 100) / 100
+          const originalOrgan = Math.round(Number(original.organWeight || 0) * 100) / 100
+          const currentPlant = Math.round(Number(ingredient.plantMatterWeight || 0) * 100) / 100
+          const originalPlant = Math.round(Number(original.plantMatterWeight || 0) * 100) / 100
+          const currentTotal = Math.round(Number(ingredient.totalWeight || 0) * 100) / 100
+          const originalTotal = Math.round(Number(original.totalWeight || 0) * 100) / 100
+
+          // IMPORTANT: Also check for unit changes
+          const unitChanged = ingredient.unit !== original.unit
 
           // Check if any values are different
           const isDifferent =
             ingredient.name !== original.name ||
-            Math.abs(currentMeat - originalMeat) > 0.01 ||
-            Math.abs(currentBone - originalBone) > 0.01 ||
-            Math.abs(currentOrgan - originalOrgan) > 0.01 ||
-            Math.abs(currentPlant - originalPlant) > 0.01 ||
-            Math.abs(currentTotal - originalTotal) > 0.01
+            currentMeat !== originalMeat ||
+            currentBone !== originalBone ||
+            currentOrgan !== originalOrgan ||
+            currentPlant !== originalPlant ||
+            currentTotal !== originalTotal ||
+            unitChanged
 
           if (isDifferent) {
-            console.log(`📝 Ingredient ${ingredient.name} has changed`)
+            console.log(`📝 Ingredient ${ingredient.name} has changed:`, {
+              meatWeight: `${originalMeat} -> ${currentMeat}`,
+              boneWeight: `${originalBone} -> ${currentBone}`,
+              organWeight: `${originalOrgan} -> ${currentOrgan}`,
+              plantMatterWeight: `${originalPlant} -> ${currentPlant}`,
+              totalWeight: `${originalTotal} -> ${currentTotal}`,
+              unit: `${original.unit} -> ${ingredient.unit}`,
+            })
           }
 
           return isDifferent

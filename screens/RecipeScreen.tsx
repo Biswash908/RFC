@@ -559,27 +559,13 @@ const RecipeScreen = ({ route }) => {
         // Get the current recipe ID
         const currentRecipeId = await AsyncStorage.getItem("currentRecipeId")
 
-        // If no recipe is currently loaded, or trying to load the same recipe, proceed without alert
-        if (!currentRecipeId || currentRecipeId === recipe.id) {
-          console.log("✅ No current recipe or loading same recipe - proceeding without alert")
-          // Reset all change tracking flags when loading the same recipe
-          if (currentRecipeId === recipe.id) {
-            await AsyncStorage.multiSet([
-              ["hasUnsavedChanges", "false"],
-              ["tempRatioModified", "false"],
-              ["userSelectedRatio", "false"],
-            ])
-          }
-          loadRecipe(recipe)
-          return
-        }
-
         // Get the actual flags from AsyncStorage for accurate checking
         const hasUnsavedChangesStr = await AsyncStorage.getItem("hasUnsavedChanges")
         const hasUnsavedChanges = hasUnsavedChangesStr === "true"
 
-        // If there are unsaved changes, show a confirmation dialog
+        // IMPORTANT: Even if loading the same recipe, check for unsaved changes
         if (hasUnsavedChanges) {
+          console.log("🔍 Unsaved changes detected - showing alert")
           Alert.alert("Unsaved Changes", "Are you sure you want to load? You have unsaved changes.", [
             {
               text: "Load",
@@ -599,6 +585,7 @@ const RecipeScreen = ({ route }) => {
           ])
         } else {
           // If no changes, proceed with loading the recipe
+          console.log("✅ No unsaved changes - proceeding without alert")
           loadRecipe(recipe)
         }
       } catch (error) {

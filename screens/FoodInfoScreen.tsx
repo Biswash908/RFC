@@ -42,6 +42,8 @@ type RootStackParamList = {
       unit: "g" | "kg" | "lbs"
       isSupplementInfo?: boolean
       supplementInfo?: string
+      isSeafood?: boolean
+      seafoodWarning?: string
     }
     editMode: boolean
   }
@@ -197,10 +199,29 @@ const FoodInfoScreen = ({ route, navigation }: Props) => {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView contentContainerStyle={styles.container}>
         {/* Display ingredient type and name for non-meat ingredients */}
-        <Text style={styles.title}>
-          {isNonMeat ? `${ingredient.type} - ${ingredient.name}` : ingredient.name}
-          {isSupplement && <Text style={styles.supplementLabel}> (Supplement)</Text>}
-        </Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>
+            {isNonMeat ? `${ingredient.type} - ${ingredient.name}` : ingredient.name}
+            {isSupplement && <Text style={styles.supplementLabel}> (Supplement)</Text>}
+          </Text>
+          {(ingredient.name === "Oysters" || ingredient.name === "Clams" || ingredient.name === "Mussels") && (
+            <TouchableOpacity onPress={toggleTooltip} style={styles.titleInfoButton}>
+              <FontAwesome name="info-circle" size={20} color="#000080" />
+            </TouchableOpacity>
+          )}
+        </View>
+        {showTooltip &&
+          (ingredient.name === "Oysters" || ingredient.name === "Clams" || ingredient.name === "Mussels") && (
+            <>
+              <TouchableOpacity style={styles.tooltipOverlay} activeOpacity={1} onPress={toggleTooltip} />
+              <Animated.View style={[styles.seafoodTooltip, { opacity: tooltipOpacity }]}>
+                <Text style={styles.tooltipText}>
+                  Use seafood sparingly due to its richness and potential heavy metal content.
+                </Text>
+                <View style={styles.seafoodTooltipArrow} />
+              </Animated.View>
+            </>
+          )}
         <View style={styles.underline} />
 
         <TextInput
@@ -291,10 +312,39 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "white",
   },
+  titleContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "flex-start", // Changed from 'center' to 'flex-start'
+    marginBottom: 5,
+  },
+  titleInfoButton: {
+    marginLeft: 10,
+    padding: 5,
+    marginTop: 5, // Added to position the icon a bit lower
+  },
   title: {
     fontSize: rs(isSmallDevice ? 20 : 24),
     fontWeight: "bold",
     textAlign: "center",
+  },
+  warningContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e3f2fd",
+    padding: 10,
+    borderRadius: 5,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: "#000080",
+  },
+  warningIcon: {
+    marginRight: 10,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: rs(isSmallDevice ? 12 : 14),
+    color: "#333",
   },
   underline: {
     height: 2,
@@ -374,7 +424,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 1,
     borderColor: "#000080",
-    top: 30,
+    top: 33,
     right: -100, // Adjusted to position more to the right
     zIndex: 1000,
   },
@@ -385,7 +435,7 @@ const styles = StyleSheet.create({
   tooltipArrow: {
     position: "absolute",
     top: -10,
-    right: 105, // Adjusted to match the new tooltip position
+    right: 103, // Adjusted to match the new tooltip position
     width: 0,
     height: 0,
     borderLeftWidth: 10,
@@ -407,6 +457,37 @@ const styles = StyleSheet.create({
     fontSize: rs(isSmallDevice ? 16 : 18),
     fontWeight: "bold",
   },
+  seafoodTooltip: {
+    position: "absolute",
+    backgroundColor: "#e3f2fd",
+    borderRadius: 6,
+    padding: 10,
+    width: SCREEN_WIDTH * 0.7,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#000080",
+    top: 58, // Adjusted to be below the icon
+    right: 20,
+    zIndex: 1000,
+  },
+  seafoodTooltipArrow: {
+    position: "absolute",
+    top: -10,
+    right: 125, // Adjusted to point to the info icon
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 10,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "#000080",
+  },
 })
 
 export default FoodInfoScreen
+
