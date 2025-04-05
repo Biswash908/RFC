@@ -79,6 +79,7 @@ const HomeTabs = () => {
                   color: "white",
                   fontSize: isIOS ? (isSmallDevice ? 8 : 10) : isSmallDevice ? 10 : 12, //Bottom nav bar text
                   marginTop: isIOS && isSmallDevice ? 0 : 0,
+                  fontFamily: "Roboto-Regular",
                 }}
               >
                 {label}
@@ -108,6 +109,7 @@ const HomeTabs = () => {
             fontSize: isIOS ? (isSmallDevice ? 16 : 22) : rs(isSmallDevice ? 18 : 25),
             fontWeight: "600",
             color: "black",
+            fontFamily: "Roboto-Medium",
           },
         }}
       />
@@ -126,6 +128,7 @@ const HomeTabs = () => {
             fontSize: isIOS ? (isSmallDevice ? 16 : 22) : rs(isSmallDevice ? 18 : 25),
             fontWeight: "600",
             color: "black",
+            fontFamily: "Roboto-Medium",
           },
         }}
       />
@@ -135,81 +138,88 @@ const HomeTabs = () => {
 
 const App: React.FC = () => {
   return (
-    <UnitProvider>
-      <SaveProvider>
-        <NavigationContainer>
-          <StatusBar barStyle="dark-content" backgroundColor="white" />
-          <Stack.Navigator
-            initialRouteName="HomeTabs"
-            screenOptions={{
-              headerTitleStyle: {
-                fontSize: isIOS ? (isSmallDevice ? 16 : 20) : rs(isSmallDevice ? 18 : 22),
-                fontWeight: "600",
-                color: "black",
-              },
-              headerTitleAlign: "center",
-              headerStyle: {
-                height: isIOS && isSmallDevice ? 60 : undefined,
-              },
-              // Add this to customize the back button text
-              headerBackTitle: "Back",
-              headerBackTitleVisible: false,
-              // If you want no text, use this instead:
-              // headerBackTitle: " ",
-            }}
-          >
-            <Stack.Screen
-              name="HomeTabs"
-              component={HomeTabs}
-              options={{ headerShown: false }}
-              initialParams={{ screen: "HomeTabsHome" }}
-            />
-            <Stack.Screen name="FoodInfoScreen" component={FoodInfoScreen} options={{ title: "Food Information" }} />
-            <Stack.Screen
-              name="SearchScreen"
-              component={SearchScreen}
-              options={{
-                title: "Search Ingredients",
+    <View style={{ flex: 1 }}>
+      <UnitProvider>
+        <SaveProvider>
+          <NavigationContainer>
+            <StatusBar barStyle="dark-content" backgroundColor="white" />
+            <Stack.Navigator
+              initialRouteName="HomeTabs"
+              screenOptions={{
+                headerTitleStyle: {
+                  fontSize: isIOS ? (isSmallDevice ? 16 : 20) : rs(isSmallDevice ? 18 : 22),
+                  fontWeight: "600",
+                  color: "black",
+                  fontFamily: "Roboto-Medium",
+                },
+                headerTitleAlign: "center",
+                headerStyle: {
+                  height: isIOS && isSmallDevice ? 60 : undefined,
+                },
+                // Add this to customize the back button text
+                headerBackTitle: "Back",
                 headerBackTitleVisible: false,
-                headerBackTitle: "Home",
+                // If you want no text, use this instead:
+                // headerBackTitle: " ",
               }}
-            />
-            <Stack.Screen
-              name="CalculatorScreen"
-              component={CalculatorScreen}
-              options={{
-                title: "Calculator",
-                headerBackTitleVisible: false,
-                headerBackTitle: "Home",
-              }}
-            />
-            <Stack.Screen name="CustomRatioScreen" component={CustomRatioScreen} options={{ title: "Custom Ratio" }} />
-            <Stack.Screen name="InfoAndSupportScreen" component={InfoAndSupportScreen} />
-            <Stack.Screen name="RecipeScreen" component={RecipeScreen} />
+            >
+              <Stack.Screen
+                name="HomeTabs"
+                component={HomeTabs}
+                options={{ headerShown: false }}
+                initialParams={{ screen: "HomeTabsHome" }}
+              />
+              <Stack.Screen name="FoodInfoScreen" component={FoodInfoScreen} options={{ title: "Food Information" }} />
+              <Stack.Screen
+                name="SearchScreen"
+                component={SearchScreen}
+                options={{
+                  title: "Search Ingredients",
+                  headerBackTitleVisible: false,
+                  headerBackTitle: "Home",
+                }}
+              />
+              <Stack.Screen
+                name="CalculatorScreen"
+                component={CalculatorScreen}
+                options={{
+                  title: "Calculator",
+                  headerBackTitleVisible: false,
+                  headerBackTitle: "Home",
+                }}
+              />
+              <Stack.Screen
+                name="CustomRatioScreen"
+                component={CustomRatioScreen}
+                options={{ title: "Custom Ratio" }}
+              />
+              <Stack.Screen name="InfoAndSupportScreen" component={InfoAndSupportScreen} />
+              <Stack.Screen name="RecipeScreen" component={RecipeScreen} />
 
-            <Stack.Screen
-              name="FAQScreen"
-              component={FAQScreen}
-              options={{
-                title: "App FAQs",
-                headerBackTitleVisible: false,
-                headerBackTitle: "Home",
-              }}
-            />
-            <Stack.Screen
-              name="RawFeedingFAQScreen"
-              component={RawFeedingFAQScreen}
-              options={{
-                title: "Raw Feeding FAQs",
-                headerBackTitleVisible: false,
-                headerBackTitle: "Home",
-              }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SaveProvider>
-    </UnitProvider>
+              <Stack.Screen
+                name="FAQScreen"
+                component={FAQScreen}
+                options={{
+                  title: "App FAQs",
+                  headerBackTitleVisible: false,
+                  headerBackTitle: "Home",
+                }}
+              />
+              <Stack.Screen
+                name="RawFeedingFAQScreen"
+                component={RawFeedingFAQScreen}
+                options={{
+                  title: "Raw Feeding FAQs",
+                  headerBackTitleVisible: false,
+                  headerBackTitle: "Home",
+                }}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SaveProvider>
+      </UnitProvider>
+    </View>
   )
 }
 
-export default App  
+export default App
