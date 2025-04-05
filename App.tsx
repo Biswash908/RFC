@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react"
+import type React from "react"
 import { NavigationContainer } from "@react-navigation/native"
 import { createStackNavigator } from "@react-navigation/stack"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Text, View, Platform, Dimensions, StatusBar } from "react-native"
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6" // Import FontAwesome6 for icons
-import * as SplashScreen from "expo-splash-screen"
 import FoodInputScreen from "./screens/FoodInputScreen"
 import FoodInfoScreen from "./screens/FoodInfoScreen"
 import SearchScreen from "./screens/SearchScreen"
@@ -16,8 +15,6 @@ import InfoAndSupportScreen from "./screens/InfoAndSupportScreen"
 import RecipeScreen from "./screens/RecipeScreen"
 import { UnitProvider } from "./UnitContext"
 import { SaveProvider } from "./SaveContext"
-
-SplashScreen.preventAutoHideAsync()
 
 // Define the ingredient type
 interface Ingredient {
@@ -137,35 +134,7 @@ const HomeTabs = () => {
 }
 
 const App: React.FC = () => {
-  const [appIsReady, setAppIsReady] = useState(false)
-
-  useEffect(() => {
-    const prepare = async () => {
-      try {
-        // Simulate a delay (e.g., 2 seconds)
-        await new Promise(resolve => setTimeout(resolve, 3000))
-      } catch (e) {
-        console.warn(e)
-      } finally {
-        setAppIsReady(true)
-      }
-    }
-
-    prepare()
-  }, [])
-
-  const onLayoutRootView = useCallback(async () => {
-    if (appIsReady) {
-      await SplashScreen.hideAsync()
-    }
-  }, [appIsReady])
-
-  if (!appIsReady) {
-    return null // Don't render until ready
-  }
-
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
     <UnitProvider>
       <SaveProvider>
         <NavigationContainer>
@@ -240,7 +209,6 @@ const App: React.FC = () => {
         </NavigationContainer>
       </SaveProvider>
     </UnitProvider>
-    </View>
   )
 }
 
