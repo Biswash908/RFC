@@ -22,7 +22,7 @@
     },
     "android": {
       "package": "com.MakeThingsUnlimited.DogCalc",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-iconD.png",
         "backgroundColor": "#FFFFFF"
