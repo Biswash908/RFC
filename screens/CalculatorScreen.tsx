@@ -153,7 +153,7 @@ const CalculatorScreen: React.FC = () => {
     // Set all corrector values to zero on initial load
     setMeatCorrect({ bone: 0, organ: 0, plantMatter: 0 })
     setBoneCorrect({ meat: 0, organ: 0, plantMatter: 0 })
-    setOrganCorrect({ meat: 0, organ: 0, plantMatter: 0 })
+    setOrganCorrect({ meat: 0, bone: 0, plantMatter: 0 })
     setPlantMatterCorrect({ meat: 0, bone: 0, organ: 0 })
   }
 
@@ -548,8 +548,6 @@ const CalculatorScreen: React.FC = () => {
   }, [route.params?.ratio])
 
   // Add a debug effect to log when customRatio changes
-  // Add this after the other useEffect hooks
-
   useEffect(() => {
     console.log("🔍 customRatio state changed:", customRatio)
   }, [customRatio])
@@ -578,41 +576,53 @@ const CalculatorScreen: React.FC = () => {
       })
     }
 
-    // Save to AsyncStorage immediately - this is critical for UI persistence
-    const saveItems = [
-      // Regular ratio values (used for UI display)
-      ["meatRatio", meat.toString()],
-      ["boneRatio", bone.toString()],
-      ["organRatio", organ.toString()],
-      ["plantMatterRatio", plantMatter.toString()],
-      ["selectedRatio", ratio],
-      ["includePlantMatter", (plantMatter > 0).toString()],
-      ["userSelectedRatio", "true"], // Add this to track user selection
-      ["tempRatioModified", "true"], // Always mark ratio as modified when user changes it
-      ["hasUnsavedChanges", "true"], // Mark as having unsaved changes
+    // Check if there are ingredients in the FoodInputScreen
+    const checkForIngredients = async () => {
+      try {
+        const currentIngredientsStr = await AsyncStorage.getItem("currentIngredients")
+        const hasIngredients = currentIngredientsStr && JSON.parse(currentIngredientsStr).length > 0
 
-      // Temporary ratio values (separate from permanent recipe data)
-      ["tempMeatRatio", meat.toString()],
-      ["tempBoneRatio", bone.toString()],
-      ["tempOrganRatio", organ.toString()],
-      ["tempPlantMatterRatio", plantMatter.toString()],
-      ["tempSelectedRatio", ratio],
-      ["tempIncludePlantMatter", (plantMatter > 0).toString()],
-    ]
+        // Save to AsyncStorage immediately - this is critical for UI persistence
+        const saveItems = [
+          // Regular ratio values (used for UI display)
+          ["meatRatio", meat.toString()],
+          ["boneRatio", bone.toString()],
+          ["organRatio", organ.toString()],
+          ["plantMatterRatio", plantMatter.toString()],
+          ["selectedRatio", ratio],
+          ["includePlantMatter", (plantMatter > 0).toString()],
+          ["userSelectedRatio", "true"], // Add this to track user selection
 
-    if (ratio === "custom") {
-      saveItems.push(
-        ["customMeatRatio", meat.toString()],
-        ["customBoneRatio", bone.toString()],
-        ["customOrganRatio", organ.toString()],
-        ["customPlantMatterRatio", plantMatter.toString()],
-        ["customIncludePlantMatter", (plantMatter > 0).toString()],
-      )
-    }
+          // Temporary ratio values (separate from permanent recipe data)
+          ["tempMeatRatio", meat.toString()],
+          ["tempBoneRatio", bone.toString()],
+          ["tempOrganRatio", organ.toString()],
+          ["tempPlantMatterRatio", plantMatter.toString()],
+          ["tempSelectedRatio", ratio],
+          ["tempIncludePlantMatter", (plantMatter > 0).toString()],
+        ]
 
-    AsyncStorage.multiSet(saveItems)
-      .then(() => {
-        console.log("✅ Successfully saved ratio selection to AsyncStorage")
+        // Only mark as modified if there are ingredients
+        if (hasIngredients) {
+          saveItems.push(["tempRatioModified", "true"])
+          saveItems.push(["hasUnsavedChanges", "true"])
+        } else {
+          saveItems.push(["tempRatioModified", "false"])
+          saveItems.push(["hasUnsavedChanges", "false"])
+        }
+
+        if (ratio === "custom") {
+          saveItems.push(
+            ["customMeatRatio", meat.toString()],
+            ["customBoneRatio", bone.toString()],
+            ["customOrganRatio", organ.toString()],
+            ["customPlantMatterRatio", plantMatter.toString()],
+            ["customIncludePlantMatter", (plantMatter > 0).toString()],
+          )
+        }
+
+        await AsyncStorage.multiSet(saveItems)
+        console.log(`✅ Successfully saved ratio selection to AsyncStorage (hasIngredients=${hasIngredients})`)
 
         // Force recalculation of correctors immediately after setting ratio
         if (
@@ -635,25 +645,27 @@ const CalculatorScreen: React.FC = () => {
             plantMatter > 0,
           )
         }
-      })
-      .catch((error) => {
-        console.error("❌ Failed to save ratio selection:", error)
-      })
 
-    // Update the route params to pass the ratio values to home
-    // But don't update the recipe directly
-    navigation.setParams({
-      ratio: {
-        meat: meat,
-        bone: bone,
-        organ: organ,
-        plantMatter: plantMatter,
-        includePlantMatter: plantMatter > 0,
-        selectedRatio: ratio,
-        isUserDefined: true,
-        isTemporary: true, // Mark as temporary
-      },
-    })
+        // Update the route params to pass the ratio values to home
+        // But don't update the recipe directly
+        navigation.setParams({
+          ratio: {
+            meat: meat,
+            bone: bone,
+            organ: organ,
+            plantMatter: plantMatter,
+            includePlantMatter: plantMatter > 0,
+            selectedRatio: ratio,
+            isUserDefined: true,
+            isTemporary: true, // Mark as temporary
+          },
+        })
+      } catch (error) {
+        console.error("❌ Failed to save ratio selection:", error)
+      }
+    }
+
+    checkForIngredients()
   }
 
   // Modify the useFocusEffect to prioritize loading temporary ratio values
@@ -1473,3 +1485,4 @@ const styles = StyleSheet.create({
 })
 
 export default CalculatorScreen
+

@@ -261,12 +261,18 @@ const FoodInputScreen: React.FC = () => {
       saveTemporaryRatio()
 
       // Mark as having unsaved changes if this is a temporary ratio and NOT a recipe load
-      if (route.params.ratio.isTemporary && !route.params?.isRecipeLoad && !route.params?.ratio?.isRecipeLoad) {
+      // AND there are ingredients present
+      if (
+        route.params.ratio.isTemporary &&
+        !route.params?.isRecipeLoad &&
+        !route.params?.ratio?.isRecipeLoad &&
+        ingredients.length > 0
+      ) {
         setHasUnsavedChanges(true)
         AsyncStorage.setItem("hasUnsavedChanges", "true")
       }
     }
-  }, [route.params?.ratio])
+  }, [route.params?.ratio, ingredients.length])
 
   const convertToUnit = (weight: number, fromUnit: "g" | "kg" | "lbs", toUnit: "g" | "kg" | "lbs") => {
     if (fromUnit === toUnit) return weight
@@ -888,8 +894,11 @@ const FoodInputScreen: React.FC = () => {
         `📝 Checking ratio changes: tempRatioModified=${tempRatioModifiedStr}, userSelectedRatio=${userSelectedRatioStr}`,
       )
 
-      const hasChanges = ingredientsChanged || ratioModified
-      console.log(`📝 Change detection result: ingredients=${ingredientsChanged}, ratio=${ratioModified}`)
+      // Only consider ratio changes if there are ingredients present
+      const ratioChangesCount = ingredients.length > 0 && ratioModified
+
+      const hasChanges = ingredientsChanged || ratioChangesCount
+      console.log(`📝 Change detection result: ingredients=${ingredientsChanged}, ratio=${ratioChangesCount}`)
 
       setHasUnsavedChanges(hasChanges)
       await AsyncStorage.setItem("hasUnsavedChanges", hasChanges ? "true" : "false")
@@ -1411,4 +1420,3 @@ const styles = StyleSheet.create({
 })
 
 export default FoodInputScreen
-

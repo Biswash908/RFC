@@ -563,9 +563,28 @@ const RecipeScreen = ({ route }) => {
         const hasUnsavedChangesStr = await AsyncStorage.getItem("hasUnsavedChanges")
         const hasUnsavedChanges = hasUnsavedChangesStr === "true"
 
-        // IMPORTANT: Even if loading the same recipe, check for unsaved changes
-        if (hasUnsavedChanges) {
-          console.log("🔍 Unsaved changes detected - showing alert")
+        // Get current ingredients to check if we have any
+        const currentIngredientsStr = await AsyncStorage.getItem("currentIngredients")
+        const hasIngredients = currentIngredientsStr && JSON.parse(currentIngredientsStr).length > 0
+
+        // Check if ratio was modified
+        const tempRatioModifiedStr = await AsyncStorage.getItem("tempRatioModified")
+        const ratioModified = tempRatioModifiedStr === "true"
+
+        // Only show the prompt if:
+        // 1. There are unsaved changes AND
+        // 2. Either:
+        //    a. There are ingredients present OR
+        //    b. Ratio was modified AND a recipe is loaded
+        if (hasUnsavedChanges && (hasIngredients || (ratioModified && currentRecipeId))) {
+          console.log(
+            "🔍 Unsaved changes detected - showing alert. hasIngredients:",
+            hasIngredients,
+            "ratioModified:",
+            ratioModified,
+            "currentRecipeId:",
+            currentRecipeId,
+          )
           Alert.alert("Unsaved Changes", "Are you sure you want to load? You have unsaved changes.", [
             {
               text: "Load",
@@ -584,8 +603,8 @@ const RecipeScreen = ({ route }) => {
             },
           ])
         } else {
-          // If no changes, proceed with loading the recipe
-          console.log("✅ No unsaved changes - proceeding without alert")
+          // If no changes or no recipe was loaded, proceed with loading the recipe
+          console.log("✅ No unsaved changes or no recipe loaded - proceeding without alert")
           loadRecipe(recipe)
         }
       } catch (error) {
