@@ -111,8 +111,8 @@ const RecipeScreen = ({ route }) => {
       name: "Chicken & Duck Bone Boost",
       ingredients: [
         {
-          id: "32",
-          name: "Chicken Breast boneless",
+          id: "38",
+          name: "Chicken Heart",
           totalWeight: 325, // Rescaled from 650g
           meatWeight: 325,
           boneWeight: 0,
