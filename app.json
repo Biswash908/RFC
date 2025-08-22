@@ -26,9 +26,7 @@
         "foregroundImage": "./assets/adaptive-iconD.png",
         "backgroundColor": "#FFFFFF"
       },
-      "permissions": [],
-      "enableDangerousExperimentalLeanBuilds": true,
-      "resizeableActivity": true
+      "permissions": []
     },
     "androidStatusBar": {
       "translucent": true,
