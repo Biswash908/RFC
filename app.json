@@ -2,8 +2,8 @@
   "expo": {
     "name": "Raw Feeding Calc for Dogs",
     "slug": "make-things-unlimited-dog-calc",
-    "version": "1.1.0",
-    "orientation": "portrait",
+    "version": "1.2.5",
+    "orientation": "default",
     "icon": "./assets/iconD.png",
     "userInterfaceStyle": "light",
     "splash": {
@@ -13,17 +13,27 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.MakeThingsUnlimited.DogCalc",
-      "versionCode": 4,
+      "versionCode": 29,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-iconD.png",
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "permissions": [],
+      "enableDangerousExperimentalLeanBuilds": true,
+      "resizeableActivity": true
+    },
+    "androidStatusBar": {
+      "translucent": true,
+      "barStyle": "dark-content",
+      "backgroundColor": "transparent"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,6 +42,9 @@
       "eas": {
         "projectId": "d7f4197f-2487-43be-b10b-95974d5ae27a"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
