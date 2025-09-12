@@ -41,33 +41,71 @@ export type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>()
 const Tab = createBottomTabNavigator()
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
+const { width: SCREEN_WIDTH } = Dimensions.get("window")
 const isSmallDevice = SCREEN_WIDTH < 375
 const isIOS = Platform.OS === "ios"
 const scale = SCREEN_WIDTH / 375
 const rs = (size: number) => Math.round(size * (isIOS ? Math.min(scale, 1.2) : scale))
 
+// Centralized tab config
+const TAB_CONFIG = [
+  {
+    name: "HomeTabsHome",
+    label: "Home",
+    icon: "house",
+    component: FoodInputScreen,
+    options: { headerShown: false },
+  },
+  {
+    name: "InfoAndSupport",
+    label: "Support",
+    icon: "gear",
+    component: InfoAndSupportScreen,
+    options: {
+      title: "Support",
+      headerTitleAlign: "center",
+      headerStyle: {
+        backgroundColor: "white",
+        height: isIOS && isSmallDevice ? 60 : undefined,
+      },
+      headerTitleStyle: {
+        fontSize: isIOS ? (isSmallDevice ? 16 : 22) : rs(isSmallDevice ? 18 : 25),
+        fontWeight: "600",
+        color: "black",
+        fontFamily: "Roboto-Medium",
+      },
+    },
+  },
+  {
+    name: "Recipe",
+    label: "Recipes",
+    icon: "book",
+    component: RecipeScreen,
+    options: {
+      title: "Recipes",
+      headerTitleAlign: "center",
+      headerStyle: {
+        backgroundColor: "white",
+        height: isIOS && isSmallDevice ? 60 : undefined,
+      },
+      headerTitleStyle: {
+        fontSize: isIOS ? (isSmallDevice ? 16 : 22) : rs(isSmallDevice ? 18 : 25),
+        fontWeight: "600",
+        color: "black",
+        fontFamily: "Roboto-Medium",
+      },
+    },
+  },
+]
+
 const HomeTabs = () => {
   return (
     <Tab.Navigator
       initialRouteName="HomeTabsHome"
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused }) => {
-          let iconName
-          let label
-
-          if (route.name === "HomeTabsHome") {
-            iconName = "house"
-            label = "Home"
-          } else if (route.name === "InfoAndSupport") {
-            iconName = "gear"
-            label = "Support"
-          } else if (route.name === "Recipe") {
-            iconName = "book"
-            label = "Recipes"
-          }
-
-          return (
+      screenOptions={({ route }) => {
+        const tab = TAB_CONFIG.find(t => t.name === route.name)
+        return {
+          tabBarIcon: ({ focused }) => (
             <View
               style={{
                 alignItems: "center",
@@ -76,69 +114,40 @@ const HomeTabs = () => {
               }}
             >
               <FontAwesome6
-                name={iconName}
-                size={isIOS ? (isSmallDevice ? 18 : 24) : isSmallDevice ? 22 : 26} //Bottom nav bar icons
-                color={"white"}
+                name={tab?.icon}
+                size={isIOS ? (isSmallDevice ? 18 : 24) : isSmallDevice ? 22 : 26}
+                color={focused ? "white" : "#cccccc"}
                 style={{ textAlign: "center" }}
               />
               <Text
                 style={{
                   color: "white",
-                  fontSize: isIOS ? (isSmallDevice ? 8 : 10) : isSmallDevice ? 10 : 12, //Bottom nav bar text
-                  marginTop: isIOS && isSmallDevice ? 0 : 0,
+                  fontSize: isIOS ? (isSmallDevice ? 8 : 10) : isSmallDevice ? 10 : 12,
+                  marginTop: 0,
                   fontFamily: "Roboto-Regular",
                 }}
               >
-                {label}
+                {tab?.label}
               </Text>
             </View>
-          )
-        },
-        tabBarShowLabel: false,
-        tabBarStyle: {
-          backgroundColor: "#000080",
-          paddingVertical: isIOS ? (isSmallDevice ? 0 : 3) : isSmallDevice ? 2 : 5,
-          height: isIOS ? (isSmallDevice ? 40 : 50) : isSmallDevice ? 45 : 55, //Bottom nav bar height
-        },
-      })}
+          ),
+          tabBarShowLabel: false,
+          tabBarStyle: {
+            backgroundColor: "#000080",
+            paddingVertical: isIOS ? (isSmallDevice ? 0 : 3) : isSmallDevice ? 2 : 5,
+            height: isIOS ? (isSmallDevice ? 40 : 50) : isSmallDevice ? 45 : 55,
+          },
+        }
+      }}
     >
-      <Tab.Screen
-        name="InfoAndSupport"
-        component={InfoAndSupportScreen}
-        options={{
-          title: "Support",
-          headerTitleAlign: "center",
-          headerStyle: {
-            backgroundColor: "white",
-            height: isIOS && isSmallDevice ? 60 : undefined,
-          },
-          headerTitleStyle: {
-            fontSize: isIOS ? (isSmallDevice ? 16 : 22) : rs(isSmallDevice ? 18 : 25),
-            fontWeight: "600",
-            color: "black",
-            fontFamily: "Roboto-Medium",
-          },
-        }}
-      />
-      <Tab.Screen name="HomeTabsHome" component={FoodInputScreen} options={{ headerShown: false }} />
-      <Tab.Screen
-        name="Recipe"
-        component={RecipeScreen}
-        options={{
-          title: "Recipes",
-          headerTitleAlign: "center",
-          headerStyle: {
-            backgroundColor: "white",
-            height: isIOS && isSmallDevice ? 60 : undefined,
-          },
-          headerTitleStyle: {
-            fontSize: isIOS ? (isSmallDevice ? 16 : 22) : rs(isSmallDevice ? 18 : 25),
-            fontWeight: "600",
-            color: "black",
-            fontFamily: "Roboto-Medium",
-          },
-        }}
-      />
+      {TAB_CONFIG.map(tab => (
+        <Tab.Screen
+          key={tab.name}
+          name={tab.name}
+          component={tab.component}
+          options={tab.options}
+        />
+      ))}
     </Tab.Navigator>
   )
 }
@@ -163,11 +172,8 @@ const App: React.FC = () => {
                 headerStyle: {
                   height: isIOS && isSmallDevice ? 60 : undefined,
                 },
-                // Add this to customize the back button text
                 headerBackTitle: "Back",
                 headerBackTitleVisible: false,
-                // If you want no text, use this instead:
-                // headerBackTitle: " ",
               }}
             >
               <Stack.Screen
@@ -176,7 +182,11 @@ const App: React.FC = () => {
                 options={{ headerShown: false }}
                 initialParams={{ screen: "HomeTabsHome" }}
               />
-              <Stack.Screen name="FoodInfoScreen" component={FoodInfoScreen} options={{ title: "Food Information" }} />
+              <Stack.Screen
+                name="FoodInfoScreen"
+                component={FoodInfoScreen}
+                options={{ title: "Food Information" }}
+              />
               <Stack.Screen
                 name="SearchScreen"
                 component={SearchScreen}
@@ -202,7 +212,6 @@ const App: React.FC = () => {
               />
               <Stack.Screen name="InfoAndSupportScreen" component={InfoAndSupportScreen} />
               <Stack.Screen name="RecipeScreen" component={RecipeScreen} />
-
               <Stack.Screen
                 name="FAQScreen"
                 component={FAQScreen}

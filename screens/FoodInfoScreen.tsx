@@ -44,6 +44,7 @@ type RootStackParamList = {
       supplementInfo?: string
       isSeafood?: boolean
       seafoodWarning?: string
+      highStarch?: boolean
     }
     editMode: boolean
   }
@@ -204,21 +205,33 @@ const FoodInfoScreen = ({ route, navigation }: Props) => {
             {isNonMeat ? `${ingredient.type} - ${ingredient.name}` : ingredient.name}
             {isSupplement && <Text style={styles.supplementLabel}> (Supplement)</Text>}
           </Text>
-          {(ingredient.name === "Oysters" || ingredient.name === "Clams" || ingredient.name === "Mussels") && (
+          {(ingredient.name === "Oysters" ||
+            ingredient.name === "Clams" ||
+            ingredient.name === "Mussels" ||
+            ingredient.highStarch) && (
             <TouchableOpacity onPress={toggleTooltip} style={styles.titleInfoButton}>
               <FontAwesome name="info-circle" size={20} color="#000080" />
             </TouchableOpacity>
           )}
         </View>
+        {showTooltip && ingredient.highStarch && (
+          <>
+            <TouchableOpacity style={styles.tooltipOverlay} activeOpacity={1} onPress={toggleTooltip} />
+            <Animated.View style={[styles.seafoodTooltip, { opacity: tooltipOpacity }]}>
+              <Text style={styles.tooltipText}>
+                High starch content – cook thoroughly before feeding to dogs as raw starch is difficult to digest. These foods are optional and not included in the classic BARF model.
+              </Text>
+              <View style={styles.seafoodTooltipArrow} />
+            </Animated.View>
+          </>
+        )}
         {showTooltip &&
           (ingredient.name === "Oysters" || ingredient.name === "Clams" || ingredient.name === "Mussels") && (
             <>
               <TouchableOpacity style={styles.tooltipOverlay} activeOpacity={1} onPress={toggleTooltip} />
-              <Animated.View style={[styles.seafoodTooltip, { opacity: tooltipOpacity }]}>
-                <Text style={styles.tooltipText}>
-                  Use seafood sparingly due to its richness and potential heavy metal content.
-                </Text>
-                <View style={styles.seafoodTooltipArrow} />
+              <Animated.View style={[styles.tooltip, { opacity: tooltipOpacity }]}>
+                <Text style={styles.tooltipText}>{getSupplementInfo()}</Text>
+                <View style={styles.tooltipArrow} />
               </Animated.View>
             </>
           )}
@@ -477,7 +490,7 @@ const styles = StyleSheet.create({
   seafoodTooltipArrow: {
     position: "absolute",
     top: -10,
-    right: 125, // Adjusted to point to the info icon
+    right: 15, // Adjusted to point directly at the info icon
     width: 0,
     height: 0,
     borderLeftWidth: 10,
@@ -487,7 +500,11 @@ const styles = StyleSheet.create({
     borderRightColor: "transparent",
     borderBottomColor: "#000080",
   },
+  supplementLabel: {
+    fontSize: rs(isSmallDevice ? 20 : 24), // Same size as title
+    color: "#000", // Black color instead of blue
+    fontWeight: "normal", // Normal weight instead of bold
+  },
 })
 
 export default FoodInfoScreen
-

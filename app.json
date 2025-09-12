@@ -2,12 +2,12 @@
   "expo": {
     "name": "Raw Feeding Calc for Dogs",
     "slug": "make-things-unlimited-dog-calc",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "orientation": "default",
     "icon": "./assets/iconD.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#FFFFFF",
       "resizeMode": "contain"
     },
     "updates": {
@@ -17,11 +17,16 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.MakeThingsUnlimited.DogCalc",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.MakeThingsUnlimited.DogCalc",
-      "versionCode": 29,
+      "versionCode": 30,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-iconD.png",
         "backgroundColor": "#FFFFFF"
@@ -31,7 +36,7 @@
     "androidStatusBar": {
       "translucent": true,
       "barStyle": "dark-content",
-      "backgroundColor": "transparent"
+      "backgroundColor": "#00000000"
     },
     "web": {
       "favicon": "./assets/favicon.png"
