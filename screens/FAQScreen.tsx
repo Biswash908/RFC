@@ -40,11 +40,6 @@ const FAQScreen = () => {
       answer: 'No, the app cannot track your dog\'s weight or health changes.',
     },
     {
-      question: 'Can I save my feeding plans?',
-      answer: 'No, you cannot save your feeding plans yet. It may be added in future updates.',
-    },
-
-    {
       question: 'How can I submit a feature suggestion or give feedback about the app?',
       answer: 'You can send an email to support@makethingsunlimited.com.',
     },
